@@ -47,7 +47,7 @@ Depois abra http://localhost:8000. Abrir o `index.html` direto pelo arquivo não
 
 ## Publicar no GitHub Pages
 
-Repositório: https://github.com/mayuaratol/SaYuuVTWebsite. URL publicada: https://mayuaratol.github.io/SaYuuVTWebsite/
+Repositório: https://github.com/sayuuvt/sayuuvt.github.io. URL publicada: https://sayuuvt.github.io/
 
 1. Faça push da branch `main`.
 2. Em *Settings → Pages*, selecione *Deploy from a branch*, branch `main`, pasta `/ (root)`.
