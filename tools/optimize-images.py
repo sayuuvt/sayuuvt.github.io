@@ -50,12 +50,84 @@ avatar = Image.open(SRC / "sayuu2.png").convert("RGB")
 avatar.thumbnail((640, 640), Image.LANCZOS)
 save(avatar, "avatar.webp", quality=86, method=6)
 
-# Imagem de compartilhamento (Open Graph) 1200x630: bg escurecido + logo
-og = fit_width(bg, 1200)
-top = (og.height - 630) // 2
-og = og.crop((0, top, 1200, top + 630))
-og = Image.blend(og, Image.new("RGB", og.size, (5, 6, 16)), 0.55)
-og_logo = logo.copy()
-og_logo.thumbnail((620, 420), Image.LANCZOS)
-og.paste(og_logo, ((1200 - og_logo.width) // 2, (630 - og_logo.height) // 2), og_logo)
-save(og, "og-image.jpg", quality=85)
+# Imagem de compartilhamento (Open Graph) 1200x630 — Discord, WhatsApp, X etc.
+# Mesmo layout do site: foto com anel neon à esquerda, logo à direita, sobre o bg escurecido.
+import math
+from PIL import ImageChops, ImageDraw, ImageFilter
+
+W, H = 1200, 630
+RING = [(255, 0, 60), (255, 217, 176), (0, 200, 192), (0, 224, 255), (255, 91, 232), (255, 0, 60)]
+
+
+def ring_color(t):
+    pos = (t % 1.0) * (len(RING) - 1)
+    i = int(pos)
+    f = pos - i
+    a, b = RING[i], RING[min(i + 1, len(RING) - 1)]
+    return tuple(round(a[k] + (b[k] - a[k]) * f) for k in range(3))
+
+
+def conic_disc(size):
+    """Disco com gradiente cônico (equivalente ao conic-gradient do CSS do site)."""
+    img = Image.new("RGB", (size, size))
+    px = img.load()
+    c = size / 2
+    for y in range(size):
+        for x in range(size):
+            ang = (math.degrees(math.atan2(y - c, x - c)) + 90 - 210) % 360
+            px[x, y] = ring_color(ang / 360)
+    return img
+
+
+def circle_mask(size, scale=4):
+    big = Image.new("L", (size * scale, size * scale), 0)
+    ImageDraw.Draw(big).ellipse((0, 0, size * scale - 1, size * scale - 1), fill=255)
+    return big.resize((size, size), Image.LANCZOS)
+
+
+og = fit_width(bg, W)
+top = (og.height - H) // 2
+og = og.crop((0, top, W, top + H))
+og = Image.blend(og, Image.new("RGB", og.size, (5, 6, 16)), 0.62)
+
+# Vinheta: bordas escuras, centro mais claro
+vig = Image.new("L", (W, H), 0)
+ImageDraw.Draw(vig).ellipse((-W * 0.15, -H * 0.35, W * 1.15, H * 1.35), fill=255)
+vig = vig.filter(ImageFilter.GaussianBlur(120))
+og = Image.composite(og, Image.blend(og, Image.new("RGB", og.size, (3, 4, 10)), 0.7), vig)
+
+AV, RING_W = 330, 12
+av_img = Image.open(SRC / "sayuu2.png").convert("RGB").resize((AV - RING_W * 2, AV - RING_W * 2), Image.LANCZOS)
+disc = conic_disc(AV)
+
+# Logo (largura alvo) e posições: grupo foto+logo centralizado
+lg = logo.copy()
+lg.thumbnail((560, 400), Image.LANCZOS)
+GAP = 48
+total = AV + GAP + lg.width
+x0 = (W - total) // 2
+ay = (H - AV) // 2
+lx, ly = x0 + AV + GAP, (H - lg.height) // 2
+
+# Brilho (glow) atrás do anel e da logo
+glow = Image.new("RGB", (W, H), (0, 0, 0))
+glow.paste(disc, (x0, ay), circle_mask(AV))
+glow_logo = Image.new("RGB", lg.size, (0, 200, 192))
+glow.paste(glow_logo, (lx, ly), lg.getchannel("A"))
+glow = glow.filter(ImageFilter.GaussianBlur(34))
+og = ImageChops.screen(og, Image.eval(glow, lambda v: int(v * 0.55)))
+
+# Sombra da logo
+shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+sh_alpha = Image.new("L", (W, H), 0)
+sh_alpha.paste(lg.getchannel("A"), (lx + 6, ly + 10))
+shadow.putalpha(sh_alpha.filter(ImageFilter.GaussianBlur(14)))
+og.paste(shadow, (0, 0), shadow)
+
+# Anel + foto + logo
+og.paste(disc, (x0, ay), circle_mask(AV))
+inner = AV - RING_W * 2
+og.paste(av_img, (x0 + RING_W, ay + RING_W), circle_mask(inner))
+og.paste(lg, (lx, ly), lg)
+
+save(og, "og-image.jpg", quality=88)
