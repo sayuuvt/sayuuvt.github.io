@@ -48,7 +48,7 @@ async function request(path, body) {
         result.status === 429
           ? 'Muitas tentativas. Aguarde um minuto.'
           : result.status === 422 || result.status === 400
-            ? 'Confira os campos: nome, e-mail, valor, mensagem sem links e consentimento.'
+            ? 'Confira os campos: nome, e-mail, valor, mensagem sem links.'
             : 'O serviço está temporariamente indisponível. Tente mais tarde.',
       ),
       { status: result.status },
@@ -159,7 +159,6 @@ form.addEventListener('submit', async (event) => {
         message: $('donation-message').value.trim(),
         voice_id: $('voice').value,
         email: $('email').value.trim(),
-        consent: $('consent').checked ? 'privacy-v1' : '',
       };
     fields.disabled = true;
     payment = await request('/public/donations', pendingRequest);
