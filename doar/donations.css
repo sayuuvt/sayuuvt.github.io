@@ -219,6 +219,15 @@ button:hover {
 #payment button {
   margin: 8px 6px 0 0;
 }
+#payment h2.status-waiting {
+  color: #ffc400;
+}
+#payment h2.status-paid {
+  color: #2ecc71;
+}
+#payment h2.status-ended {
+  color: var(--text-dim);
+}
 #payment h2 {
   font-size: 24px;
 }

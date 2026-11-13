@@ -20,8 +20,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="donations.css?v=20261113b" />
-    <script src="donations.js?v=20261113b" type="module"></script>
+    <link rel="stylesheet" href="donations.css?v=20261113c" />
+    <script src="donations.js?v=20261113c" type="module"></script>
   </head>
   <body>
     <div class="bg" aria-hidden="true"></div>
@@ -128,8 +128,9 @@
         </fieldset>
       </form>
       <section id="payment" class="donation-panel" hidden aria-labelledby="payment-title">
-        <h2 id="payment-title">Seu Pix está pronto</h2>
-        <p id="payment-status" role="status" aria-live="polite"></p>
+        <h2 id="payment-title" class="status-waiting" role="status" aria-live="polite">
+          Aguardando pagamento...
+        </h2>
         <div id="embedded" hidden>
           <img id="qr-image" alt="QR Code do Pix" width="256" height="256" hidden /><label
             for="pix-code"
@@ -140,9 +141,7 @@
         <a id="checkout-link" class="donate-button" target="_blank" rel="noopener noreferrer" hidden
           >Abrir checkout Pix no Mercado Pago ↗</a
         >
-        <p id="expires" class="fine-print"></p>
-        <button id="check-status" type="button">Verificar pagamento</button
-        ><button id="new-donation" type="button">Começar outro apoio</button>
+        <button id="new-donation" type="button">Começar outro apoio</button>
       </section>
       <p id="error" class="donation-error" role="alert" hidden></p>
       <noscript

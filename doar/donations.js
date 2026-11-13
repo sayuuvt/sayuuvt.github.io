@@ -11,6 +11,7 @@ let pendingRequest;
 let timer;
 let polls = 0;
 let busy = false;
+let checkoutTab = null;
 const format = (cents) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fail = (message) => {
@@ -89,20 +90,17 @@ function safeTicket(value) {
 
 function renderPayment() {
   $('payment').hidden = false;
-  const messages = {
-    awaiting_payment: 'Aguardando Pix. O pagamento será confirmado pelo provedor.',
-    paid: 'Apoio confirmado. Obrigada por fazer parte da live! Sua mensagem seguirá para moderação.',
-    expired: 'Este Pix expirou. Não pague este código.',
-    processing: 'Pagamento em processamento. Aguarde a confirmação.',
-    reconciliation_required:
-      'Conferindo o pagamento com o provedor. Nenhum recebimento foi confirmado ainda.',
-    refunded: 'O Pix foi devolvido.',
-    cancelled: 'Este Pix foi cancelado.',
-    partially_refunded: 'Este Pix teve devolução parcial.',
+  const headlines = {
+    paid: ['Pagamento confirmado 😊', 'status-paid'],
+    expired: ['Pix expirado', 'status-ended'],
+    refunded: ['Pix devolvido', 'status-ended'],
+    cancelled: ['Pix cancelado', 'status-ended'],
+    partially_refunded: ['Pix com devolução parcial', 'status-ended'],
   };
-  $('payment-status').textContent =
-    (payment.simulated ? 'DEMONSTRAÇÃO · SEM DINHEIRO REAL. ' : '') +
-    (messages[payment.status] || 'Conferindo solicitação.');
+  const [headline, tone] = headlines[payment.status] || ['Aguardando pagamento...', 'status-waiting'];
+  const title = $('payment-title');
+  title.textContent = (payment.simulated ? 'DEMONSTRAÇÃO · ' : '') + headline;
+  title.className = tone;
   const waiting = payment.status === 'awaiting_payment' && Date.now() / 1000 < payment.expires_at;
   const ticket = safeTicket(payment.checkout?.ticket_url);
   $('checkout-link').hidden = !waiting || !ticket;
@@ -112,12 +110,31 @@ function renderPayment() {
   const image = payment.checkout?.qr_code_base64;
   $('qr-image').hidden = !image;
   if (image) $('qr-image').src = 'data:image/png;base64,' + image;
-  $('expires').textContent = waiting
-    ? 'Válido até ' +
-      new Date(payment.expires_at * 1000).toLocaleString('pt-BR') +
-      '. A aprovação da mensagem e a reprodução do alerta são independentes do pagamento.'
-    : '';
+  if (checkoutTab) {
+    if (waiting && ticket) {
+      checkoutTab.location.href = ticket;
+      checkoutTab = null;
+    } else if (!['creating', 'processing', 'reconciliation_required'].includes(payment.status)) {
+      checkoutTab.close();
+      checkoutTab = null;
+    }
+  }
   $('payment').scrollIntoView({ behavior: 'instant', block: 'nearest' });
+}
+
+// Aba reservada no clique (antes do await) para o navegador não bloquear como pop-up.
+function reserveCheckoutTab() {
+  try {
+    const tab = window.open('about:blank', '_blank');
+    if (tab) {
+      tab.opener = null;
+      tab.document.title = 'Mercado Pago';
+      tab.document.body.textContent = 'Abrindo o pagamento Pix…';
+    }
+    return tab;
+  } catch {
+    return null;
+  }
 }
 
 async function check() {
@@ -129,18 +146,15 @@ async function check() {
   } catch (e) {
     fail(e.message);
   }
+  // Continua verificando enquanto o Pix valer (30 min): a pessoa fica na aba do Mercado Pago e
+  // a aba do site segue em segundo plano (o navegador apenas reduz a frequência).
   if (
-    ++polls < 30 &&
+    ++polls < 400 &&
     ['creating', 'awaiting_payment', 'processing', 'reconciliation_required'].includes(
       payment.status,
     )
   )
-    timer = setTimeout(
-      () => {
-        if (!document.hidden) void check();
-      },
-      Math.min(10000, 2000 + polls * 500),
-    );
+    timer = setTimeout(() => void check(), Math.min(8000, 2000 + polls * 500));
 }
 
 form.addEventListener('submit', async (event) => {
@@ -149,6 +163,8 @@ form.addEventListener('submit', async (event) => {
   clearError();
   busy = true;
   $('submit').disabled = true;
+  checkoutTab?.close();
+  checkoutTab = reserveCheckoutTab();
   try {
     if (!pendingRequest)
       pendingRequest = {
@@ -170,6 +186,8 @@ form.addEventListener('submit', async (event) => {
     polls = 0;
     timer = setTimeout(check, 2500);
   } catch (e) {
+    checkoutTab?.close();
+    checkoutTab = null;
     fail(e.message);
     fields.disabled = false;
     if ([400, 422].includes(e.status)) pendingRequest = undefined;
@@ -197,10 +215,6 @@ $('copy-code').addEventListener('click', async () => {
     $('pix-code').select();
     fail('Selecione e copie o código exibido.');
   }
-});
-$('check-status').addEventListener('click', () => {
-  polls = 0;
-  void check();
 });
 $('new-donation').addEventListener('click', () => {
   clearTimeout(timer);
