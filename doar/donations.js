@@ -48,7 +48,7 @@ async function request(path, body) {
         result.status === 429
           ? 'Muitas tentativas. Aguarde um minuto.'
           : result.status === 422 || result.status === 400
-            ? 'Confira os campos: nome, e-mail, valor, mensagem sem links.'
+            ? 'Confira os campos: apelido, e-mail, valor, mensagem sem links.'
             : 'O serviço está temporariamente indisponível. Tente mais tarde.',
       ),
       { status: result.status },
