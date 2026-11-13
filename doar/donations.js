@@ -1,6 +1,6 @@
-// Public configuration only. No production gateway until the separate publication gates.
+// Public configuration only: the gateway exposes just /public/* and the Mercado Pago webhook.
 const local = ['127.0.0.1', 'localhost'].includes(location.hostname);
-const gateway = local ? 'http://127.0.0.1:8111' : '';
+const gateway = local ? 'http://127.0.0.1:5111' : 'https://sayuuvt-pc.taile1dc42.ts.net:8443';
 const $ = (id) => document.getElementById(id);
 const form = $('donation-form');
 const fields = $('fields');
