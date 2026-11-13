@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://127.0.0.1:8111; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Apoie a live · SaYuuVT</title>
+    <meta
+      name="description"
+      content="Envie seu apoio e uma mensagem para a live da SaYuuVT, exclusivamente por Pix."
+    />
+    <meta name="theme-color" content="#ff003c" />
+    <link rel="icon" href="../assets/favicon.png" type="image/png" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="donations.css" />
+    <script src="donations.js" type="module"></script>
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+    <main class="card donation-card">
+      <header class="hero">
+        <a class="avatar" href="../" aria-label="Voltar ao site SaYuuVT"
+          ><img src="../assets/avatar.webp" alt="" width="640" height="640" /></a
+        ><a class="logo" href="../"
+          ><img src="../assets/logo.webp" alt="SaYuuVT" width="900" height="601"
+        /></a>
+      </header>
+      <div class="intro">
+        <span class="pix-tag">EXCLUSIVAMENTE PIX</span>
+        <h1>Seu apoio faz parte da live.</h1>
+        <p>Deixe uma mensagem e ajude a manter as transmissões acontecendo.</p>
+      </div>
+      <p class="service-notice" id="notice" role="status">Conectando ao serviço de apoio…</p>
+      <form id="donation-form" class="donation-panel" autocomplete="off">
+        <fieldset id="fields" disabled>
+          <label for="display-name">Como quer aparecer na live?</label
+          ><input
+            id="display-name"
+            name="display_name"
+            maxlength="80"
+            placeholder="Seu nome ou apelido"
+            required
+            autocomplete="nickname"
+          />
+          <label class="checkbox"
+            ><input id="anonymous" type="checkbox" />Aparecer como Anônimo</label
+          >
+          <fieldset class="amounts">
+            <legend>Escolha seu apoio</legend>
+            <div id="suggestions" class="suggestions"></div>
+          </fieldset>
+          <label for="amount">Valor em reais</label>
+          <div class="amount-input">
+            <span aria-hidden="true">R$</span
+            ><input
+              id="amount"
+              name="amount"
+              inputmode="decimal"
+              value="10,00"
+              required
+              pattern="[0-9]{1,5}([,.][0-9]{1,2})?"
+              aria-describedby="limits"
+            />
+          </div>
+          <small id="limits"></small>
+          <label for="donation-message">Uma mensagem para a live <span>(opcional)</span></label
+          ><textarea
+            id="donation-message"
+            name="message"
+            maxlength="280"
+            rows="3"
+            placeholder="Mande sua energia para a transmissão!"
+            aria-describedby="message-help"
+          ></textarea
+          ><small id="message-help"
+            >Até 280 caracteres. Sem links, CPF, telefone ou e-mail. Mensagens passam por
+            moderação.</small
+          >
+          <label for="voice">Voz da mensagem</label
+          ><select id="voice" name="voice_id"></select>
+          <label for="email">E-mail para o pagamento</label
+          ><input
+            id="email"
+            name="email"
+            type="email"
+            maxlength="254"
+            autocomplete="email"
+            required
+            aria-describedby="email-help"
+          /><small id="email-help">Usado somente no processamento. Não aparece na live.</small>
+          <details class="privacy">
+            <summary>Privacidade e como o apoio funciona</summary>
+            <p>
+              O pagamento é processado pelo Mercado Pago via Pix. O nome artístico do site não
+              oculta o nome civil e a identificação do titular da conta recebedora no banco ou no
+              comprovante.
+            </p>
+            <p>
+              Nome público, valor e mensagem aprovada podem aparecer na transmissão. Seu e-mail fica
+              protegido no servidor somente enquanto necessário para criar o pagamento e depois é
+              removido do registro local.
+            </p>
+            <p>
+              O alerta depende da confirmação do pagamento, da moderação e da fila da transmissão.
+              Fora da live, poderá ficar pendente para revisão. Não há garantia de leitura imediata.
+              Este apoio voluntário não oferece um produto ou serviço em troca.
+            </p>
+            <p>
+              Não solicitamos CPF do pagador neste formulário. Nenhum dado pessoal é salvo no
+              armazenamento do navegador.
+            </p>
+          </details>
+          <label class="checkbox consent"
+            ><input id="consent" type="checkbox" required />Li as informações de privacidade e
+            concordo com a exibição dos dados públicos e com o processamento do Pix.</label
+          >
+          <button id="submit" class="donate-button" type="submit">
+            Continuar com Pix <span aria-hidden="true">→</span>
+          </button>
+        </fieldset>
+      </form>
+      <section id="payment" class="donation-panel" hidden aria-labelledby="payment-title">
+        <h2 id="payment-title">Seu Pix está pronto</h2>
+        <p id="payment-status" role="status" aria-live="polite"></p>
+        <div id="embedded" hidden>
+          <img id="qr-image" alt="QR Code do Pix" width="256" height="256" hidden /><label
+            for="pix-code"
+            >Pix Copia e Cola</label
+          ><textarea id="pix-code" readonly rows="3"></textarea
+          ><button id="copy-code" type="button">Copiar código Pix</button>
+        </div>
+        <a id="checkout-link" class="donate-button" target="_blank" rel="noopener noreferrer" hidden
+          >Abrir checkout Pix no Mercado Pago ↗</a
+        >
+        <p id="expires" class="fine-print"></p>
+        <button id="check-status" type="button">Verificar pagamento</button
+        ><button id="new-donation" type="button">Começar outro apoio</button>
+      </section>
+      <p id="error" class="donation-error" role="alert" hidden></p>
+      <noscript
+        ><p>
+          Ative o JavaScript para carregar a disponibilidade do Pix. Nenhum pagamento foi criado.
+        </p></noscript
+      >
+      <footer class="footer">
+        <p>Feito com carinho pela comunidade · SaYuuVT</p>
+        <a href="../">← Voltar às redes sociais</a>
+      </footer>
+    </main>
+  </body>
+</html>
