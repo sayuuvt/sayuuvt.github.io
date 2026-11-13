@@ -244,11 +244,8 @@ document.addEventListener('visibilitychange', () => {
 async function initialize() {
   try {
     configuration = await request('/public/donations/config');
-    $('notice').textContent =
-      configuration.notice +
-      (!configuration.live && configuration.offline_notice
-        ? ' ' + configuration.offline_notice
-        : '');
+    // O aviso só aparece quando o apoio está indisponível (sem texto fixo sobre o provedor).
+    if (!configuration.available) showUnavailable();
     $('limits').textContent =
       `De ${format(configuration.minimum_cents)} a ${format(configuration.maximum_cents)}. Apoio voluntário, sem produto em troca.`;
     for (const cents of configuration.suggestions) {
@@ -271,8 +268,12 @@ async function initialize() {
     }
     fields.disabled = !configuration.available;
   } catch (e) {
-    $('notice').textContent = 'O apoio por Pix está indisponível no momento.';
+    showUnavailable();
     fail(e.message);
   }
+}
+function showUnavailable() {
+  $('notice').textContent = 'O apoio por Pix está indisponível no momento.';
+  $('notice').hidden = false;
 }
 void initialize();

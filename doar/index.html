@@ -20,8 +20,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="donations.css?v=20261113c" />
-    <script src="donations.js?v=20261113c" type="module"></script>
+    <link rel="stylesheet" href="donations.css?v=20261113d" />
+    <script src="donations.js?v=20261113d" type="module"></script>
   </head>
   <body>
     <div class="bg" aria-hidden="true"></div>
@@ -34,11 +34,10 @@
         /></a>
       </header>
       <div class="intro">
-        <span class="pix-tag">EXCLUSIVAMENTE PIX</span>
         <h1>Seu apoio faz parte da live.</h1>
         <p>Deixe uma mensagem e ajude a manter as transmissões acontecendo.</p>
       </div>
-      <p class="service-notice" id="notice" role="status">Conectando ao serviço de apoio…</p>
+      <p class="service-notice" id="notice" role="status" hidden>
       <form id="donation-form" class="donation-panel" autocomplete="off">
         <fieldset id="fields" disabled>
           <label for="display-name">Apelido (é o que aparece na live)</label
@@ -128,9 +127,12 @@
         </fieldset>
       </form>
       <section id="payment" class="donation-panel" hidden aria-labelledby="payment-title">
-        <h2 id="payment-title" class="status-waiting" role="status" aria-live="polite">
-          Aguardando pagamento...
-        </h2>
+        <div class="payment-head">
+          <h2 id="payment-title" class="status-waiting" role="status" aria-live="polite">
+            Aguardando pagamento...
+          </h2>
+          <button id="new-donation" type="button">Começar outro apoio</button>
+        </div>
         <div id="embedded" hidden>
           <img id="qr-image" alt="QR Code do Pix" width="256" height="256" hidden /><label
             for="pix-code"
@@ -141,7 +143,6 @@
         <a id="checkout-link" class="donate-button" target="_blank" rel="noopener noreferrer" hidden
           >Abrir checkout Pix no Mercado Pago ↗</a
         >
-        <button id="new-donation" type="button">Começar outro apoio</button>
       </section>
       <p id="error" class="donation-error" role="alert" hidden></p>
       <noscript

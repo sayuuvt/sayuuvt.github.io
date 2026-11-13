@@ -16,16 +16,18 @@
   color: var(--text-dim);
   margin: 0;
 }
-.pix-tag {
-  display: inline-block;
-  color: var(--neon-blue);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  font-weight: 800;
-  border: 1px solid #00e0ff45;
-  border-radius: 999px;
-  padding: 6px 12px;
-  background: #00e0ff09;
+.payment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.payment-head h2 {
+  margin: 0;
+}
+#payment .payment-head button {
+  margin: 0;
 }
 .donation-panel {
   background: var(--panel-bg);
