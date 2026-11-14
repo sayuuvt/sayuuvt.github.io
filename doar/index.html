@@ -20,8 +20,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="donations.css?v=20261113e" />
-    <script src="donations.js?v=20261113e" type="module"></script>
+    <link rel="stylesheet" href="donations.css?v=20261113f" />
+    <script src="donations.js?v=20261113f" type="module"></script>
   </head>
   <body>
     <div class="bg" aria-hidden="true"></div>
@@ -80,11 +80,10 @@
             aria-describedby="message-help"
           ></textarea
           ><small id="message-help"
-            >Até 280 caracteres. Sem links, CPF, telefone ou e-mail. Mensagens passam por
-            moderação.</small
+            >Até 280 caracteres. Sem links, CPF, telefone ou e-mail.</small
           >
           <label for="voice">Voz da mensagem</label
-          ><select id="voice" name="voice_id"></select>
+          ><select id="voice" name="voice_id" required></select>
           <label for="email">E-mail para o pagamento</label
           ><input
             id="email"
@@ -103,14 +102,14 @@
               comprovante.
             </p>
             <p>
-              Somente o apelido digitado, o valor e a mensagem aprovada podem aparecer na
+              Somente o apelido digitado, o valor e a mensagem podem aparecer na
               transmissão; seu nome real não é exibido. Seu e-mail fica
               protegido no servidor somente enquanto necessário para criar o pagamento e depois é
               removido do registro local.
             </p>
             <p>
-              O alerta depende da confirmação do pagamento, da moderação e da fila da transmissão.
-              Fora da live, poderá ficar pendente para revisão. Não há garantia de leitura imediata.
+              O alerta entra automaticamente na fila após a confirmação do pagamento.
+              A exibição acontece quando o overlay estiver em execução, respeitando os alertas anteriores.
               Este apoio voluntário não oferece um produto ou serviço em troca.
             </p>
             <p>

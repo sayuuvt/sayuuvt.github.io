@@ -12,6 +12,8 @@ let timer;
 let polls = 0;
 let busy = false;
 let checkoutTab = null;
+let catalogRequest;
+let catalogTimer;
 const format = (cents) =>
   (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const fail = (message) => {
@@ -92,9 +94,9 @@ function renderPayment() {
   const headlines = {
     paid: ['Pagamento confirmado 😊', 'status-paid'],
     expired: ['Pix expirado', 'status-ended'],
-    refunded: ['Pix devolvido', 'status-ended'],
+    refunded: ['Pix reembolsado', 'status-ended'],
     cancelled: ['Pix cancelado', 'status-ended'],
-    partially_refunded: ['Pix com devolução parcial', 'status-ended'],
+    partially_refunded: ['Pix com reembolso parcial', 'status-ended'],
   };
   const [headline, tone] = headlines[payment.status] || ['Aguardando pagamento...', 'status-waiting'];
   const title = $('payment-title');
@@ -165,7 +167,11 @@ form.addEventListener('submit', async (event) => {
   checkoutTab?.close();
   checkoutTab = reserveCheckoutTab();
   try {
-    if (!pendingRequest)
+    if (!pendingRequest) {
+      await synchronizeCatalog();
+      if (!configuration.available) throw new Error('O apoio por Pix está indisponível no momento.');
+      if (!configuration.voices.some((voice) => voice.id === $('voice').value))
+        throw new Error('A lista de vozes mudou. Escolha uma voz antes de continuar.');
       pendingRequest = {
         request_id: crypto.randomUUID(),
         display_name: $('anonymous').checked ? 'Anônimo' : $('display-name').value.trim(),
@@ -175,6 +181,7 @@ form.addEventListener('submit', async (event) => {
         voice_id: $('voice').value,
         email: $('email').value.trim(),
       };
+    }
     fields.disabled = true;
     payment = await request('/public/donations', pendingRequest);
     pendingRequest = undefined;
@@ -227,52 +234,87 @@ $('new-donation').addEventListener('click', () => {
   $('payment').hidden = true;
   clearError();
   $('display-name').focus();
+  refreshCatalogWhenIdle();
 });
 addEventListener('pagehide', () => {
   clearTimeout(timer);
+  clearInterval(catalogTimer);
   pendingRequest = undefined;
   $('email').value = '';
 });
 addEventListener('online', () => {
   if (payment) void check();
+  refreshCatalogWhenIdle();
 });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && payment && polls < 30) void check();
+  if (!document.hidden) refreshCatalogWhenIdle();
+});
+addEventListener('focus', refreshCatalogWhenIdle);
+addEventListener('pageshow', () => {
+  clearInterval(catalogTimer);
+  catalogTimer = setInterval(() => { if (!document.hidden) refreshCatalogWhenIdle(); }, 60000);
+  refreshCatalogWhenIdle();
 });
 
-async function initialize() {
-  try {
-    configuration = await request('/public/donations/config');
+function synchronizeCatalog() {
+  if (catalogRequest) return catalogRequest;
+  catalogRequest = request('/public/donations/config').then((next) => {
+    const previous = configuration;
+    const selected = $('voice').value;
+    configuration = next;
     // O aviso só aparece quando o apoio está indisponível (sem texto fixo sobre o provedor).
     if (!configuration.available) showUnavailable();
+    else $('notice').hidden = true;
     $('limits').textContent =
       `A partir de ${format(configuration.minimum_cents)}. Apoio voluntário, sem produto em troca.`;
-    for (const cents of configuration.suggestions) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = format(cents);
-      button.setAttribute('aria-pressed', 'false');
-      button.addEventListener('click', () => {
-        $('amount').value = (cents / 100).toFixed(2).replace('.', ',');
-        for (const b of $('suggestions').children)
-          b.setAttribute('aria-pressed', String(b === button));
-      });
-      $('suggestions').append(button);
+    if (JSON.stringify(previous?.suggestions) !== JSON.stringify(configuration.suggestions)) {
+      $('suggestions').replaceChildren();
+      for (const cents of configuration.suggestions) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = format(cents);
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', () => {
+          $('amount').value = (cents / 100).toFixed(2).replace('.', ',');
+          for (const b of $('suggestions').children)
+            b.setAttribute('aria-pressed', String(b === button));
+        });
+        $('suggestions').append(button);
+      }
     }
-    for (const voice of configuration.voices) {
-      const option = document.createElement('option');
-      option.value = voice.id;
-      option.textContent = voice.label;
-      $('voice').append(option);
+    if (JSON.stringify(previous?.voices) !== JSON.stringify(configuration.voices)) {
+      $('voice').replaceChildren();
+      for (const voice of configuration.voices) {
+        const option = document.createElement('option');
+        option.value = voice.id;
+        option.textContent = voice.label;
+        $('voice').append(option);
+      }
+      if (selected && configuration.voices.some((voice) => voice.id === selected)) $('voice').value = selected;
+      else if (previous) {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Escolha uma voz';
+        placeholder.disabled = true;
+        $('voice').prepend(placeholder);
+        $('voice').value = '';
+      }
     }
     fields.disabled = !configuration.available;
-  } catch (e) {
+  }).finally(() => { catalogRequest = undefined; });
+  return catalogRequest;
+}
+function refreshCatalogWhenIdle() {
+  if (busy || payment || pendingRequest) return;
+  void synchronizeCatalog().catch((e) => {
+    if (configuration) return;
     showUnavailable();
     fail(e.message);
-  }
+  });
 }
 function showUnavailable() {
   $('notice').textContent = 'O apoio por Pix está indisponível no momento.';
   $('notice').hidden = false;
 }
-void initialize();
+refreshCatalogWhenIdle();
