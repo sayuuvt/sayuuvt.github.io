@@ -20,8 +20,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="donations.css?v=20261113f" />
-    <script src="donations.js?v=20261113f" type="module"></script>
+    <link rel="stylesheet" href="donations.css?v=20261114a" />
+    <script src="donations.js?v=20261114a" type="module"></script>
   </head>
   <body>
     <div class="bg" aria-hidden="true"></div>
@@ -82,8 +82,8 @@
           ><small id="message-help"
             >Até 280 caracteres. Sem links, CPF, telefone ou e-mail.</small
           >
-          <label for="voice">Voz da mensagem</label
-          ><select id="voice" name="voice_id" required></select>
+          <div id="voice-field" hidden><label for="voice">Voz da mensagem</label
+          ><select id="voice" name="voice_id" disabled></select></div>
           <label for="email">E-mail para o pagamento</label
           ><input
             id="email"

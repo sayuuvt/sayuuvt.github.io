@@ -170,7 +170,7 @@ form.addEventListener('submit', async (event) => {
     if (!pendingRequest) {
       await synchronizeCatalog();
       if (!configuration.available) throw new Error('O apoio por Pix está indisponível no momento.');
-      if (!configuration.voices.some((voice) => voice.id === $('voice').value))
+      if (configuration.live && !configuration.voices.some((voice) => voice.id === $('voice').value))
         throw new Error('A lista de vozes mudou. Escolha uma voz antes de continuar.');
       pendingRequest = {
         request_id: crypto.randomUUID(),
@@ -178,7 +178,7 @@ form.addEventListener('submit', async (event) => {
         anonymous: $('anonymous').checked,
         amount_cents: amountCents(),
         message: $('donation-message').value.trim(),
-        voice_id: $('voice').value,
+        voice_id: configuration.live ? $('voice').value : 'none',
         email: $('email').value.trim(),
       };
     }
@@ -230,6 +230,7 @@ $('new-donation').addEventListener('click', () => {
   fields.disabled = false;
   for (const field of form.querySelectorAll('input,textarea,select')) field.disabled = false;
   $('display-name').required = true;
+  updateVoiceVisibility();
   $('submit').textContent = 'Continuar com Pix →';
   $('payment').hidden = true;
   clearError();
@@ -257,9 +258,21 @@ addEventListener('pageshow', () => {
   refreshCatalogWhenIdle();
 });
 
+function updateVoiceVisibility() {
+  const live = configuration?.live === true;
+  $('voice-field').hidden = !live;
+  $('voice').disabled = !live;
+  $('voice').required = live;
+}
+
 function synchronizeCatalog() {
   if (catalogRequest) return catalogRequest;
   catalogRequest = request('/public/donations/config').then((next) => {
+    if (payment || pendingRequest) {
+      configuration.live = next.live;
+      updateVoiceVisibility();
+      return;
+    }
     const previous = configuration;
     const selected = $('voice').value;
     configuration = next;
@@ -301,12 +314,13 @@ function synchronizeCatalog() {
         $('voice').value = '';
       }
     }
+    updateVoiceVisibility();
     fields.disabled = !configuration.available;
   }).finally(() => { catalogRequest = undefined; });
   return catalogRequest;
 }
 function refreshCatalogWhenIdle() {
-  if (busy || payment || pendingRequest) return;
+  if (busy) return;
   void synchronizeCatalog().catch((e) => {
     if (configuration) return;
     showUnavailable();
