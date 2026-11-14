@@ -59,14 +59,13 @@ async function request(path, body) {
 
 function amountCents() {
   const value = $('amount').value.trim();
-  if (!/^\d{1,5}([.,]\d{1,2})?$/.test(value))
+  if (!/^\d+([.,]\d{1,2})?$/.test(value))
     throw new Error('Informe um valor em reais com até duas casas decimais.');
   const [whole, fraction = ''] = value.replace(',', '.').split('.');
-  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  const cents = Number(whole + fraction.padEnd(2, '0'));
   if (
     !Number.isSafeInteger(cents) ||
-    cents < configuration.minimum_cents ||
-    cents > configuration.maximum_cents
+    cents < configuration.minimum_cents
   )
     throw new Error('O valor está fora dos limites informados.');
   return cents;
@@ -247,7 +246,7 @@ async function initialize() {
     // O aviso só aparece quando o apoio está indisponível (sem texto fixo sobre o provedor).
     if (!configuration.available) showUnavailable();
     $('limits').textContent =
-      `De ${format(configuration.minimum_cents)} a ${format(configuration.maximum_cents)}. Apoio voluntário, sem produto em troca.`;
+      `A partir de ${format(configuration.minimum_cents)}. Apoio voluntário, sem produto em troca.`;
     for (const cents of configuration.suggestions) {
       const button = document.createElement('button');
       button.type = 'button';
