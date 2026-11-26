@@ -157,7 +157,7 @@ svg {
   transform: translateX(-50%);
   padding: 3px 10px;
   border-radius: var(--radius-pill);
-  background: var(--neon-red);
+  background: #bd002e;
   color: var(--text-strong);
   font-size: 11px;
   font-weight: 800;
@@ -242,6 +242,14 @@ svg {
     background var(--t-base) var(--ease),
     box-shadow var(--t-base) var(--ease);
 }
+
+.brand-twitch { --brand: #a970ff; }
+.brand-youtube { --brand: #ff2a2a; }
+.brand-instagram { --brand: #ff5be8; }
+.brand-x { --brand: #e8edf6; }
+.brand-discord { --brand: #7984ff; }
+.brand-donation { --brand: #ff4d6d; }
+.brand-email { --brand: #ffd500; }
 
 /* Faixa de cor da marca na lateral */
 .link::before {

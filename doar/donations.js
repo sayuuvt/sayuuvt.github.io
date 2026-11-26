@@ -68,7 +68,11 @@ async function request(path, body, controller = new AbortController()) {
       ),
       { status: result.status },
     );
-    return await result.json();
+    try {
+      return await result.json();
+    } catch {
+      throw new Error('Resposta do serviço inválida. Tente consultar novamente.');
+    }
   } finally {
     clearTimeout(timeout);
   }
@@ -181,10 +185,10 @@ function renderPayment({ initial = false } = {}) {
       }
       checkoutTab = null;
     } else if (!['creating', 'processing', 'reconciliation_required'].includes(payment.status)) {
-      checkoutTab.close();
-      checkoutTab = null;
+      closeCheckoutTab();
     }
   }
+  updateNavigationGuard();
   if (initial) {
     title.focus({ preventScroll: true });
     $('payment').scrollIntoView({ behavior: 'instant', block: 'nearest' });
@@ -215,7 +219,7 @@ function stopStatus() {
 }
 
 function closeCheckoutTab() {
-  checkoutTab?.close();
+  try { checkoutTab?.close(); } catch { /* Aba já encerrada. */ }
   checkoutTab = null;
 }
 
@@ -235,7 +239,12 @@ async function check({ manual = false } = {}) {
     paymentStartedAt = Date.now();
     pollDelay = 2500;
   }
+  if (Date.now() - paymentStartedAt >= MAX_POLL_MS) {
+    scheduleStatus();
+    return;
+  }
   clearTimeout(timer);
+  renderPayment();
   const current = generation;
   const id = payment.id;
   const controller = new AbortController();
@@ -244,6 +253,8 @@ async function check({ manual = false } = {}) {
   try {
     const next = validatePayment(await request('/public/donations/' + encodeURIComponent(id) + '/status', undefined, controller), id);
     if (!isCurrent()) return;
+    if (next.amount_cents !== payment.amount_cents)
+      throw new Error('Valor retornado não corresponde à cobrança. Atualize o status novamente.');
     payment = next;
     clearError();
     renderPayment();
@@ -275,9 +286,11 @@ function restoreFields() {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (busy || !configuration) return;
+  if (busy || payment || !configuration) return;
   clearError();
+  const retrying = Boolean(pendingRequest);
   busy = true;
+  updateNavigationGuard();
   $('submit').disabled = true;
   closeCheckoutTab();
   if (configuration.checkout_mode === 'external') checkoutTab = reserveCheckoutTab();
@@ -315,12 +328,14 @@ form.addEventListener('submit', async (event) => {
   } catch (e) {
     closeCheckoutTab();
     fail(e.message);
-    if ([400, 422].includes(e.status)) pendingRequest = undefined;
+    // Um erro posterior não prova que a primeira criação ambígua falhou.
+    if (!retrying && [400, 422].includes(e.status)) pendingRequest = undefined;
     if (pendingRequest) freezePending();
     else if (payment) fields.disabled = true;
     else restoreFields();
   } finally {
     busy = false;
+    updateNavigationGuard();
     $('submit').disabled = false;
   }
 });
@@ -348,6 +363,7 @@ $('new-donation').addEventListener('click', () => {
   payment = undefined;
   pendingRequest = undefined;
   form.reset();
+  configFresh = false;
   restoreFields();
   syncSuggestions();
   $('payment').hidden = true;
@@ -356,8 +372,10 @@ $('new-donation').addEventListener('click', () => {
   $('pix-code').value = '';
   $('copy-code').textContent = 'Copiar código Pix';
   clearError();
-  $('display-name').focus();
-  refreshCatalogWhenIdle();
+  updateNavigationGuard();
+  void synchronizeCatalog().then(() => {
+    if (!fields.disabled) $('display-name').focus();
+  }).catch((e) => fail(e.message));
 });
 // Nenhum dado pessoal ou identificador de pagamento é persistido no navegador.
 function warnPendingNavigation(event) {
@@ -366,7 +384,13 @@ function warnPendingNavigation(event) {
     event.returnValue = '';
   }
 }
-addEventListener('beforeunload', warnPendingNavigation);
+function updateNavigationGuard() {
+  if (pendingRequest || busy || (payment && ACTIVE.has(payment.status))) {
+    addEventListener('beforeunload', warnPendingNavigation);
+  } else {
+    removeEventListener('beforeunload', warnPendingNavigation);
+  }
+}
 addEventListener('pagehide', (event) => {
   pageActive = false;
   stopStatus();
@@ -413,7 +437,10 @@ function synchronizeCatalog() {
     configuration = next;
     // O aviso só aparece quando o apoio está indisponível (sem texto fixo sobre o provedor).
     if (!configuration.available) showUnavailable();
-    else $('notice').hidden = true;
+    else if (configuration.simulated === true) {
+      $('notice').textContent = 'DEMONSTRAÇÃO · Nenhum pagamento real será processado.';
+      $('notice').hidden = false;
+    } else $('notice').hidden = true;
     $('limits').textContent =
       `A partir de ${format(configuration.minimum_cents)}. Apoio voluntário, sem produto em troca.`;
     if (JSON.stringify(previous?.suggestions) !== JSON.stringify(configuration.suggestions)) {
@@ -463,7 +490,7 @@ function synchronizeCatalog() {
   return catalogRequest;
 }
 function refreshCatalogWhenIdle() {
-  if (busy) return;
+  if (busy || payment || pendingRequest || !pageActive) return;
   void synchronizeCatalog().catch((e) => {
     if (payment || pendingRequest) return;
     showUnavailable();

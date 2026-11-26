@@ -16,7 +16,7 @@ tools/optimize-images.py
 
 ## Editar links
 
-Os links ficam em `index.html`, um `<li>` por rede. A cor do brilho de cada botão vem de `style="--brand: #cor"`.
+Os links ficam em `index.html`, um `<li>` por rede. A cor do brilho de cada botão vem das classes `brand-*` em `css/style.css`.
 
 - Para esconder um link sem apagá-lo, adicione `hidden` ao `<li>`.
 - **E-mail**: fica em `data-user` e `data-domain` no elemento `[data-email]` e é montado pelo JS, para não aparecer em texto puro no HTML.
@@ -39,3 +39,12 @@ Depois abra http://localhost:8000. Abrir o `index.html` direto pelo arquivo não
 ## Publicar no GitHub Pages
 
 Ícones de marca: [Simple Icons](https://simpleicons.org) (CC0).
+
+## Testes e segurança
+
+A página principal e a página Pix usam CSP restritiva; a exceção loopback da página Pix permite testes locais.
+
+## Regenerar imagens
+
+Instale Pillow (`python -m pip install Pillow`) e execute `python tools/optimize-images.py /caminho/dos/originais`.
+Os arquivos de origem necessários são `image.png`, `4-gradiente.png` e `sayuu2.png`. Revise os resultados antes de publicar.

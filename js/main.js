@@ -18,16 +18,27 @@
     contact.hidden = false;
 
     const copy = contact.querySelector("[data-copy]");
+    let copyTimer;
+    let copyAttempt = 0;
+    copy.setAttribute("aria-live", "polite");
     copy.addEventListener("click", async () => {
+      const attempt = ++copyAttempt;
+      clearTimeout(copyTimer);
       try {
         await navigator.clipboard.writeText(address);
+        if (attempt !== copyAttempt) return;
         copy.textContent = "Copiado";
+        copy.setAttribute("aria-label", "E-mail copiado");
         copy.classList.add("is-done");
       } catch {
+        if (attempt !== copyAttempt) return;
         copy.textContent = "Erro";
+        copy.setAttribute("aria-label", "Não foi possível copiar o e-mail");
+        copy.classList.remove("is-done");
       }
-      setTimeout(() => {
+      copyTimer = setTimeout(() => {
         copy.textContent = "Copiar";
+        copy.setAttribute("aria-label", "Copiar e-mail");
         copy.classList.remove("is-done");
       }, 1800);
     });
