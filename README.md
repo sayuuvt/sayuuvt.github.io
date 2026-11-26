@@ -42,6 +42,8 @@ Depois abra http://localhost:8000. Abrir o `index.html` direto pelo arquivo não
 
 ## Testes e segurança
 
+Execute `node --test tests/*.test.cjs` com Node.js 22+. A rede e o DOM são simulados; nenhuma cobrança real é criada.
+
 A página principal e a página Pix usam CSP restritiva; a exceção loopback da página Pix permite testes locais.
 
 ## Regenerar imagens
