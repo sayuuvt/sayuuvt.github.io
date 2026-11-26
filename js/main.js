@@ -18,64 +18,95 @@
     contact.hidden = false;
 
     const copy = contact.querySelector("[data-copy]");
+    let copyTimer;
+    let copyAttempt = 0;
+    copy.setAttribute("aria-live", "polite");
     copy.addEventListener("click", async () => {
+      const attempt = ++copyAttempt;
+      clearTimeout(copyTimer);
       try {
         await navigator.clipboard.writeText(address);
+        if (attempt !== copyAttempt) return;
         copy.textContent = "Copiado";
+        copy.setAttribute("aria-label", "E-mail copiado");
         copy.classList.add("is-done");
       } catch {
+        if (attempt !== copyAttempt) return;
         copy.textContent = "Erro";
+        copy.setAttribute("aria-label", "Não foi possível copiar o e-mail");
+        copy.classList.remove("is-done");
       }
-      setTimeout(() => {
+      copyTimer = setTimeout(() => {
         copy.textContent = "Copiar";
+        copy.setAttribute("aria-label", "Copiar e-mail");
         copy.classList.remove("is-done");
       }, 1800);
     });
   }
 
-  // === Badge AO VIVO ===
-  // decapi.me responde texto puro e libera CORS; offline => "<canal> is offline".
+  // === Status AO VIVO (compartilhado pelas páginas de links e doação) ===
   const avatar = document.querySelector(".avatar");
   const badge = document.querySelector("[data-live-badge]");
   const twitchLink = document.querySelector("[data-twitch-link]");
   const tag = document.querySelector("[data-live-tag]");
   const sub = document.querySelector("[data-twitch-sub]");
-  const defaultSub = sub ? sub.textContent : "";
+  const defaultSub = sub?.textContent ?? "";
+  let checking = false;
 
   const fetchText = async (path) => {
-    const res = await fetch(`https://decapi.me/twitch/${path}/${CHANNEL}`, { cache: "no-store" });
-    if (!res.ok) throw new Error(res.status);
-    return (await res.text()).trim();
-  };
-
-  const setLive = (live, game) => {
-    avatar.classList.toggle("is-live", live);
-    twitchLink.classList.toggle("is-live", live);
-    badge.hidden = !live;
-    tag.hidden = !live;
-    sub.textContent = live ? (game ? `Jogando ${game}` : "Assistir agora") : defaultSub;
-  };
-
-  const checkLive = async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const uptime = await fetchText("uptime");
-      const live = uptime !== "" && !/offline|error|not found|no user/i.test(uptime);
-      let game = "";
-      if (live) {
-        game = await fetchText("game").catch(() => "");
-        if (/error|not found/i.test(game)) game = "";
-      }
-      setLive(live, game);
-    } catch {
-      // Falha de rede/serviço: mantém o estado offline silenciosamente.
-      setLive(false);
+      const res = await fetch(`https://decapi.me/twitch/${path}/${CHANNEL}`, {
+        cache: "no-store",
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(res.status);
+      return (await res.text()).trim();
+    } finally {
+      clearTimeout(timeout);
     }
   };
 
-  if (avatar && badge && twitchLink && tag && sub) {
-    checkLive();
-    setInterval(() => {
-      if (!document.hidden) checkLive();
-    }, LIVE_POLL_MS);
+  const setLive = (live) => {
+    avatar?.classList.toggle("is-live", live);
+    avatar?.setAttribute("aria-label", live ? "Abrir canal na Twitch — ao vivo" : "Abrir canal na Twitch");
+    twitchLink?.classList.toggle("is-live", live);
+    if (badge) badge.hidden = !live;
+    if (tag) tag.hidden = !live;
+    if (sub) sub.textContent = live ? "Assistir agora" : defaultSub;
+  };
+
+  const checkLive = async () => {
+    if (checking || document.hidden) return;
+    checking = true;
+    try {
+      const uptime = await fetchText("uptime");
+      // Só confirma a transmissão quando a resposta contém uma duração válida.
+      const live = /^(?:\d+\s+(?:years?|months?|weeks?|days?|hours?|minutes?|seconds?))(?:,\s*\d+\s+(?:years?|months?|weeks?|days?|hours?|minutes?|seconds?))*$/i.test(uptime);
+      setLive(live);
+      // A página de doação precisa apenas do status, não da categoria do jogo.
+      if (live && sub) {
+        const game = await fetchText("game").catch(() => "");
+        if (game && !/error|not found|no user|offline/i.test(game)) {
+          sub.textContent = `Jogando ${game}`;
+        }
+      }
+    } catch {
+      // Falha de rede/serviço: não anuncia uma transmissão sem confirmação.
+      setLive(false);
+    } finally {
+      checking = false;
+    }
+  };
+
+  if (avatar && badge) {
+    void checkLive();
+    setInterval(checkLive, LIVE_POLL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) void checkLive();
+    });
   }
 })();

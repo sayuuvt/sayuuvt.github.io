@@ -1,16 +1,27 @@
 """Gera os assets otimizados do site a partir das imagens originais do canal.
 
-Uso: python tools/optimize-images.py [pasta_origem]
+Uso: python tools/optimize-images.py pasta_origem
 Os originais ficam fora do repo; só os resultados em assets/ são versionados.
 """
-import sys
+import argparse
+import math
+import warnings
 from pathlib import Path
-from PIL import Image
 
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(r"E:\Midia\Imagens\SaYuuVT\Canal")
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("pasta_origem", type=Path)
+SRC = parser.parse_args().pasta_origem
 OUT = Path(__file__).resolve().parent.parent / "assets"
+warnings.simplefilter("error", Image.DecompressionBombWarning)
+for filename in ("image.png", "4-gradiente.png", "sayuu2.png"):
+    path = SRC / filename
+    if not path.is_file():
+        parser.error(f"Arquivo de origem ausente: {path}")
+    with Image.open(path) as image:
+        image.verify()
 OUT.mkdir(exist_ok=True)
-Image.MAX_IMAGE_PIXELS = None
 
 
 def save(img, name, **kw):
@@ -28,9 +39,11 @@ bg = Image.open(SRC / "image.png").convert("RGB")
 save(fit_width(bg, 1920), "bg.webp", quality=78, method=6)
 
 # Background mobile: recorte retrato centrado na mesa/personagem principal
-crop_w = int(bg.height * 0.75)
-left = int(bg.width * 0.25)
-mobile = bg.crop((left, 0, left + crop_w, bg.height))
+crop_h = min(bg.height, max(1, round(bg.width / 0.75)))
+crop_w = max(1, min(bg.width, int(crop_h * 0.75)))
+left = max(0, min(int(bg.width * 0.25), bg.width - crop_w))
+top = (bg.height - crop_h) // 2
+mobile = bg.crop((left, top, left + crop_w, top + crop_h))
 save(mobile.resize((1200, 1600), Image.LANCZOS), "bg-mobile.webp", quality=76, method=6)
 
 # Logo
@@ -52,9 +65,6 @@ save(avatar, "avatar.webp", quality=86, method=6)
 
 # Imagem de compartilhamento (Open Graph) 1200x630 — Discord, WhatsApp, X etc.
 # Mesmo layout do site: foto com anel neon à esquerda, logo à direita, sobre o bg escurecido.
-import math
-from PIL import ImageChops, ImageDraw, ImageFilter
-
 W, H = 1200, 630
 RING = [(255, 0, 60), (255, 217, 176), (0, 200, 192), (0, 224, 255), (255, 91, 232), (255, 0, 60)]
 

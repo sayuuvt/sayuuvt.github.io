@@ -6,4 +6,11 @@ O formulário usa centavos, apelido público, mensagem, voz permitida, e-mail pa
 
 Checkout externo oficial é o caminho padrão. QR incorporado está preparado para uso sujeito à revisão da política do GitHub Pages. Nenhum endereço simulado gera Pix utilizável.
 
-Em desenvolvimento local o gateway de teste responde em `http://127.0.0.1:5111` (`python -m streamcontroller.gateway_main`, projeto StreamController legado). Os testes automatizados do gateway e do domínio pertencem ao repositório privado StreamController; incluem viewport mobile, validação, reconciliação simulada e ausência de caminhos administrativos. Não equivalem a validação financeira real. Em produção a página fala com o gateway público (`https://sayuuvt-pc.taile1dc42.ts.net:8443`, Tailscale Funnel só para `/public` e `/webhooks`).
+Em desenvolvimento local o gateway de teste responde em `http://127.0.0.1:5111` (`python -m streamcontroller.gateway_main`, projeto StreamControllerProject). Os testes automatizados do gateway e do domínio pertencem ao repositório StreamControllerProject; incluem viewport mobile, validação, reconciliação simulada e ausência de caminhos administrativos. Não equivalem a validação financeira real. Em produção a página fala com o gateway público (`https://sayuuvt-pc.taile1dc42.ts.net:8443`, Tailscale Funnel só para `/public` e `/webhooks`).
+
+## Recuperação e acompanhamento
+
+- O mesmo UUID e o mesmo payload são reaproveitados após resposta incerta, enquanto a página estiver aberta. Nenhum dado é persistido no armazenamento do site.
+- O polling usa uma única requisição de status por sessão, com cancelamento e descarte de respostas antigas. Após uma hora, o usuário pode retomar manualmente em "Atualizar status".
+- O navegador pode alertar antes de sair durante uma operação pendente. Fechar/recarregar a página perde a recuperação em memória; a API atual não disponibiliza busca pública por request_id. Não tente criar outra cobrança sem verificar a anterior.
+- O gateway publicado e o fluxo real devem ser validados separadamente. Os testes frontend não validam processamento financeiro nem a política de retenção de dados do backend.

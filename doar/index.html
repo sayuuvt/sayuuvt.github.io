@@ -6,7 +6,7 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://sayuuvt-pc.taile1dc42.ts.net:8443 http://127.0.0.1:5111; object-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://decapi.me https://sayuuvt-pc.taile1dc42.ts.net:8443 http://127.0.0.1:5111; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>Apoie a live · SaYuuVT</title>
     <meta
@@ -19,17 +19,23 @@
       href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="image" href="../assets/bg.webp" media="(orientation: landscape)" />
+    <link rel="preload" as="image" href="../assets/bg-mobile.webp" media="(orientation: portrait)" />
     <link rel="stylesheet" href="../css/style.css" />
-    <link rel="stylesheet" href="donations.css?v=20261114a" />
-    <script src="donations.js?v=20261114a" type="module"></script>
+    <link rel="stylesheet" href="donations.css?v=20261126a" />
+    <script src="../js/main.js" defer></script>
+    <script src="donations.js?v=20261126b" type="module"></script>
   </head>
   <body>
     <div class="bg" aria-hidden="true"></div>
     <main class="card donation-card">
       <header class="hero">
-        <a class="avatar" href="../" aria-label="Voltar ao site SaYuuVT"
-          ><img src="../assets/avatar.webp" alt="" width="640" height="640" /></a
-        ><a class="logo" href="../"
+        <a class="avatar" href="https://www.twitch.tv/sayuuvt" target="_blank" rel="noopener" aria-label="Abrir canal na Twitch">
+          <img src="../assets/avatar.webp" alt="" width="640" height="640" />
+          <span class="live-badge" data-live-badge hidden>Ao vivo</span>
+        </a><a class="logo" href="../"
           ><img src="../assets/logo.webp" alt="SaYuuVT" width="900" height="601"
         /></a>
       </header>
@@ -127,9 +133,10 @@
       </form>
       <section id="payment" class="donation-panel" hidden aria-labelledby="payment-title">
         <div class="payment-head">
-          <h2 id="payment-title" class="status-waiting" role="status" aria-live="polite">
+          <h2 id="payment-title" tabindex="-1" class="status-waiting" role="status" aria-live="polite">
             Aguardando pagamento...
           </h2>
+          <button id="refresh-payment" type="button" hidden>Atualizar status</button>
           <button id="new-donation" type="button">Começar outro apoio</button>
         </div>
         <div id="embedded" hidden>
@@ -137,7 +144,7 @@
             for="pix-code"
             >Pix Copia e Cola</label
           ><textarea id="pix-code" readonly rows="3"></textarea
-          ><button id="copy-code" type="button">Copiar código Pix</button>
+          ><button id="copy-code" type="button" aria-live="polite">Copiar código Pix</button>
         </div>
         <a id="checkout-link" class="donate-button" target="_blank" rel="noopener noreferrer" hidden
           >Abrir checkout Pix no Mercado Pago ↗</a

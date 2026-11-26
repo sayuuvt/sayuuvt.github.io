@@ -1,4 +1,4 @@
-# SaYuuVT — site de links
+# SaYuuVT — site de links e apoio
 
 Página de links (substitui o Carrd) com o visual do painel de stream: tema escuro, neon e fonte Exo 2.
 É estático (HTML + CSS + JS puro), sem etapa de build, e roda direto no GitHub Pages.
@@ -8,14 +8,15 @@ Página de links (substitui o Carrd) com o visual do painel de stream: tema escu
 ```
 index.html            # conteúdo e links
 css/style.css         # estilos (tokens herdados do painel)
-js/main.js            # badge "AO VIVO", e-mail e ano do rodapé
+js/main.js            # badge "AO VIVO" compartilhado, e-mail e ano do rodapé
+doar/                 # página de apoio Pix (HTML, CSS, JS e documentação)
 assets/               # imagens otimizadas + icons.svg (sprite de ícones)
 tools/optimize-images.py
 ```
 
 ## Editar links
 
-Os links ficam em `index.html`, um `<li>` por rede. A cor do brilho de cada botão vem de `style="--brand: #cor"`.
+Os links ficam em `index.html`, um `<li>` por rede. A cor do brilho de cada botão vem das classes `brand-*` em `css/style.css`.
 
 - Para esconder um link sem apagá-lo, adicione `hidden` ao `<li>`.
 - **E-mail**: fica em `data-user` e `data-domain` no elemento `[data-email]` e é montado pelo JS, para não aparecer em texto puro no HTML.
@@ -23,8 +24,8 @@ Os links ficam em `index.html`, um `<li>` por rede. A cor do brilho de cada bot�
 
 ## Badge "AO VIVO"
 
-`js/main.js` consulta `https://decapi.me/twitch/uptime/sayuuvt` (serviço público, sem token, com CORS liberado) a cada 2 minutos.
-Quando o canal está em live, o avatar ganha um anel vermelho pulsante e o botão da Twitch mostra o jogo atual.
+`js/main.js` consulta `https://decapi.me/twitch/uptime/sayuuvt` (serviço público, sem token, com CORS liberado) a cada 2 minutos, enquanto a página estiver visível, nas duas páginas. Ao retornar à aba, o status é atualizado.
+Quando o canal está em live, o avatar ganha um anel vermelho pulsante e o indicador "Ao vivo" aparece nas duas páginas e o botão da Twitch na página de links mostra o jogo atual. O avatar abre o canal da Twitch em ambas; a logo da página de apoio volta aos links.
 Se o serviço falhar, o site só deixa de mostrar o badge; o resto da página continua funcionando.
 
 ## Rodar localmente
@@ -38,3 +39,14 @@ Depois abra http://localhost:8000. Abrir o `index.html` direto pelo arquivo não
 ## Publicar no GitHub Pages
 
 Ícones de marca: [Simple Icons](https://simpleicons.org) (CC0).
+
+## Testes e segurança
+
+Execute `node --test tests/*.test.cjs` com Node.js 22+. A rede e o DOM são simulados; nenhuma cobrança real é criada.
+
+A página principal e a página Pix usam CSP restritiva; a exceção loopback da página Pix permite testes locais.
+
+## Regenerar imagens
+
+Instale Pillow (`python -m pip install Pillow`) e execute `python tools/optimize-images.py /caminho/dos/originais`.
+Os arquivos de origem necessários são `image.png`, `4-gradiente.png` e `sayuu2.png`. Revise os resultados antes de publicar.
