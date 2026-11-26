@@ -5,18 +5,18 @@ const {join}=require('node:path');
 const source=readFileSync(join(__dirname,'..','doar/donations.js'),'utf8');
 
 const flush=async()=>{for(let i=0;i<50;i++)await Promise.resolve()};
-const config={available:true,live:false,simulated:true,minimum_cents:100,suggestions:[500,1000],voices:[{id:'none',label:'Sem voz'}],checkout_mode:'external'};
+const config={available:true,live:false,simulated:true,payment_environment:'simulated',minimum_cents:100,suggestions:[500,1000],voices:[{id:'none',label:'Sem voz'}],checkout_mode:'external'};
 const A='a'.repeat(43), B='b'.repeat(43);
 const payment=(id=A,status='awaiting_payment',extra={})=>({id,status,amount_cents:1000,expires_at:Date.now()/1000+1800,checkout:{},simulated:true,...extra});
 const response=(data,status=200)=>({ok:status===200,status,json:async()=>data});
 function element(){return {hidden:true,disabled:false,value:'',textContent:'',children:[],handlers:{},attrs:{},scrolls:0,addEventListener(k,f){this.handlers[k]=f},replaceChildren(){this.children=[]},append(x){this.children.push(x)},prepend(x){this.children.unshift(x)},setAttribute(k,v){this.attrs[k]=v},getAttribute(k){return this.attrs[k]??this[k]??null},removeAttribute(k){delete this.attrs[k];delete this[k]},scrollIntoView(){this.scrolls++},focus(){},reset(){},querySelectorAll(){return []}}}
-async function harness(source){
+async function harness(source,{hostname='localhost',catalog=config}={}){
  const nodes=new Map(),events={},requests=[];let serial=0,configError=false;
  const get=k=>{if(!nodes.has(k))nodes.set(k,element());return nodes.get(k)};
  get('amount').value='10,00';get('display-name').value='Teste';get('email').value='teste@example.invalid';
  const doc={hidden:false,getElementById:get,createElement:element,addEventListener(k,f){events[k]=f}};
- const fetch=(url,options)=>url.endsWith('/config')?(configError?Promise.reject(Error('offline')):Promise.resolve(response(config))):new Promise(resolve=>requests.push({url,options,resolve}));
- const api=new Function('document','location','addEventListener','removeEventListener','fetch','setTimeout','clearTimeout','setInterval','clearInterval','AbortController','window','crypto',source+'\nreturn {check,renderPayment,validatePayment,validateConfiguration,safeTicket,synchronizeCatalog,setPayment(p){payment=p;paymentStartedAt=Date.now()},getPayment(){return payment},getPending(){return pendingRequest}};')(doc,{hostname:'localhost'},(k,f)=>events[k]=f,k=>delete events[k],fetch,()=>++serial,()=>{},()=>++serial,()=>{},class{signal={aborted:false};abort(){this.signal.aborted=true}},{open:()=>null,confirm:()=>true},{randomUUID:()=> '12345678-1234-4123-8123-123456789012'});
+ const fetch=(url,options)=>url.endsWith('/config')?(configError?Promise.reject(Error('offline')):Promise.resolve(response(catalog))):new Promise(resolve=>requests.push({url,options,resolve}));
+ const api=new Function('document','location','addEventListener','removeEventListener','fetch','setTimeout','clearTimeout','setInterval','clearInterval','AbortController','window','crypto',source+'\nreturn {check,renderPayment,validatePayment,validateConfiguration,safeTicket,synchronizeCatalog,setPayment(p){payment=p;paymentStartedAt=Date.now()},getPayment(){return payment},getPending(){return pendingRequest}};')(doc,{hostname},(k,f)=>events[k]=f,k=>delete events[k],fetch,()=>++serial,()=>{},()=>++serial,()=>{},class{signal={aborted:false};abort(){this.signal.aborted=true}},{open:()=>null,confirm:()=>true},{randomUUID:()=> '12345678-1234-4123-8123-123456789012'});
  await flush();return {...api,get,events,requests,failConfig(){configError=true},submit(){return get('donation-form').handlers.submit({preventDefault(){}})}};
 }
 function register(test,assert,source){
@@ -47,4 +47,33 @@ for(const s of [{name:'links online',links:true,uptime:'1 hour, 2 minutes',live:
 test('checkout URL allowlist',async()=>{
  const h=await harness(source);assert.ok(h.safeTicket('https://www.mercadopago.com.br/payments/123/ticket'));
  for(const u of ['https://www.mercadopago.com.br.evil.test/payments/123/ticket','http://www.mercadopago.com.br/payments/123/ticket','https://www.mercadopago.com.br:444/payments/123/ticket','javascript:alert(1)'])assert.equal(h.safeTicket(u),null);
+});
+
+for (const [environment, simulated] of [['simulated',true],['sandbox',false],['live',false]]) {
+  test('payment environment '+environment+' is only available in appropriate location',async()=>{
+    const catalog={...config,payment_environment:environment,simulated};
+    const local=await harness(source,{catalog});
+    assert.equal(local.get('fields').disabled,false);
+    assert.equal(local.get('notice').hidden,environment==='live');
+    if(environment==='simulated')assert.match(local.get('notice').textContent,/DEMONSTRAÇÃO/);
+    if(environment==='sandbox')assert.match(local.get('notice').textContent,/SANDBOX/);
+    const deployed=await harness(source,{hostname:'sayuuvt.github.io',catalog});
+    assert.equal(deployed.get('fields').disabled,environment!=='live');
+    assert.equal(deployed.get('notice').hidden,environment==='live');
+    assert.doesNotMatch(deployed.get('notice').textContent,/DEMONSTRAÇÃO|SANDBOX/);
+  });
+}
+test('legacy or inconsistent environment fails closed on public site',async()=>{
+  for(const catalog of [{...config,payment_environment:undefined},{...config,payment_environment:'live',simulated:true}]){
+    const h=await harness(source,{hostname:'sayuuvt.github.io',catalog});
+    assert.equal(h.get('fields').disabled,true);
+    assert.doesNotMatch(h.get('notice').textContent,/DEMONSTRAÇÃO/);
+  }
+});
+test('unexpected simulated checkout is not shown publicly',async()=>{
+  const h=await harness(source,{hostname:'sayuuvt.github.io',catalog:{...config,payment_environment:'live',simulated:false}});
+  h.setPayment(payment());h.renderPayment({initial:true});
+  assert.equal(h.get('checkout-link').hidden,true);
+  assert.equal(h.get('embedded').hidden,true);
+  assert.match(h.get('payment-title').textContent,/ambiente de teste inesperado/);
 });

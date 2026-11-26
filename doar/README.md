@@ -14,3 +14,7 @@ Em desenvolvimento local o gateway de teste responde em `http://127.0.0.1:5111` 
 - O polling usa uma única requisição de status por sessão, com cancelamento e descarte de respostas antigas. Após uma hora, o usuário pode retomar manualmente em "Atualizar status".
 - O navegador pode alertar antes de sair durante uma operação pendente. Fechar/recarregar a página perde a recuperação em memória; a API atual não disponibiliza busca pública por request_id. Não tente criar outra cobrança sem verificar a anterior.
 - O gateway publicado e o fluxo real devem ser validados separadamente. Os testes frontend não validam processamento financeiro nem a política de retenção de dados do backend.
+
+## Ambientes financeiros
+
+O gateway retorna `payment_environment` (`live`, `sandbox` ou `simulated`) e `simulated`, derivados do provedor ativo. A página pública só habilita o formulário quando o ambiente é explicitamente `live` e a API permite doações. Simulação e Sandbox aparecem somente em localhost/127.0.0.1. Uma API antiga ou resposta inconsistente deixa o Pix indisponível até a atualização do núcleo StreamController; não é seguro inferir produção do estado da Twitch.

@@ -89,7 +89,17 @@ function validateConfiguration(value) {
         v && typeof v.id === 'string' && v.id.length > 0 && typeof v.label === 'string')) {
     throw new Error('Configuração do Pix inválida. Tente novamente mais tarde.');
   }
-  return value;
+  // Versões antigas da API retornavam simulated a partir de configurações persistidas.
+  // Em produção, só um ambiente explícito e consistente autoriza a criação de Pix.
+  const environment = value.payment_environment;
+  const known = ['simulated', 'sandbox', 'live'].includes(environment);
+  const consistent = known && value.simulated === (environment === 'simulated');
+  const mode = consistent ? environment : 'unknown';
+  return {
+    ...value,
+    payment_environment: mode,
+    available: value.available && (mode === 'live' || (local && ['simulated', 'sandbox'].includes(mode))),
+  };
 }
 
 function validatePayment(value, expectedId) {
@@ -155,11 +165,14 @@ function renderPayment({ initial = false } = {}) {
   const [headline, tone] = headlines[payment.status] || ['Aguardando pagamento...', 'status-waiting'];
   const title = $('payment-title');
   const locallyExpired = payment.status === 'awaiting_payment' && Date.now() / 1000 >= payment.expires_at;
-  const label = (payment.simulated ? 'DEMONSTRAÇÃO · ' : '') +
-    (locallyExpired ? 'Prazo do Pix encerrado; verificando confirmação...' : headline);
+  const unexpectedSimulation = !local && payment.simulated;
+  const prefix = local && payment.simulated ? 'DEMONSTRAÇÃO · ' :
+    local && configuration.payment_environment === 'sandbox' ? 'SANDBOX · ' : '';
+  const label = unexpectedSimulation ? 'Pagamento indisponível: ambiente de teste inesperado.' :
+    prefix + (locallyExpired ? 'Prazo do Pix encerrado; verificando confirmação...' : headline);
   if (title.textContent !== label) title.textContent = label;
-  title.className = tone;
-  const waiting = payment.status === 'awaiting_payment' && Date.now() / 1000 < payment.expires_at;
+  title.className = unexpectedSimulation ? 'status-ended' : tone;
+  const waiting = !unexpectedSimulation && payment.status === 'awaiting_payment' && Date.now() / 1000 < payment.expires_at;
   const ticket = safeTicket(payment.checkout?.ticket_url);
   $('checkout-link').hidden = !waiting || !ticket;
   if (waiting && ticket) $('checkout-link').href = ticket;
@@ -435,10 +448,13 @@ function synchronizeCatalog() {
     const previous = configuration;
     const selected = $('voice').value;
     configuration = next;
-    // O aviso só aparece quando o apoio está indisponível (sem texto fixo sobre o provedor).
+    // A página pública aceita exclusivamente Pix de produção.
     if (!configuration.available) showUnavailable();
-    else if (configuration.simulated === true) {
+    else if (local && configuration.payment_environment === 'simulated') {
       $('notice').textContent = 'DEMONSTRAÇÃO · Nenhum pagamento real será processado.';
+      $('notice').hidden = false;
+    } else if (local && configuration.payment_environment === 'sandbox') {
+      $('notice').textContent = 'SANDBOX · Ambiente de testes do Mercado Pago.';
       $('notice').hidden = false;
     } else $('notice').hidden = true;
     $('limits').textContent =
