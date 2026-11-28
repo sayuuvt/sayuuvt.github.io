@@ -19,3 +19,11 @@ no Pages publicado. Não gravar Client Secret ou token em código.
 Recarregar a página exige novo login. A API é experimental; não publicar.
 O laboratório permanece separado e usa exportação/importação de JSON.
 O chat do Top 8 e a revisão visual completa em navegador ainda estão pendentes.
+
+## Transmissão local
+
+A administração pode selecionar o evento ou reservar uma partida disponível
+(Ladder ou Top 8). Carregar no placar exige a ponte explicitamente habilitada
+no backend e confirmação do administrador. A reserva não pausa prazos nem
+bloqueia o confronto. Nenhum acesso direto ao logger é feito pelo navegador.
+Veja docs/ladder/README.md do StreamControllerProject para configurar a ponte.

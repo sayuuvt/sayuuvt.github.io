@@ -15,6 +15,7 @@
   let user = null, screen = "profile", events = [], selected = null, current = null;
   let adminState = null, adminId = null, seedOrder = [], room = null, cursor = 0;
   let epoch = 0, busy = false, polling = false;
+  let streamState = null;
   const error = (target, err) => { $(target).textContent = err.message || "Não foi possível concluir a operação."; };
   const name = p => p ? [p.team,p.nick || "Competidor"].filter(Boolean).join(" | ") : "A definir";
   const path = id => "/events/" + encodeURIComponent(id);
@@ -39,7 +40,7 @@
     $("competition-nav").hidden = !user;
     $("admin-nav").hidden = !user || !user.admin;
     if (!user) {
-      epoch++; events=[]; selected=null; current=null; adminId=null; adminState=null; seedOrder=[];
+      epoch++; events=[]; selected=null; current=null; adminId=null; adminState=null; seedOrder=[]; streamState=null; $("stream-actions").replaceChildren(); $("stream-selection").textContent="";
       clearRoom(); $("standings").replaceChildren(); $("public-bracket").replaceChildren();
       $("event-catalog").replaceChildren(); $("admin-event").replaceChildren(); $("seed-list").replaceChildren();
       $("admin-matches").replaceChildren(); $("admin-bracket").replaceChildren();
@@ -200,7 +201,7 @@
       const card=el("article",undefined,"ladder-panel"); card.append(el("h3",bracketNames[key]),el("p",set.status==="complete"?(set.reason==="dq"?"DQ":set.reason==="bye"?"BYE":"Concluída"):set.status==="ready"?"Disponível":"Aguardando"));
       set.slots.forEach((p,i)=>card.append(el("p",(set.winner&&set.winner===p?"✓ ":"")+name(profiles[p])+(set.result?" — "+set.result[i]:""))));
       if(admin&&bracket.started&&set.status==="ready"){
-        card.append(action("Reportar",()=>reportAdmin("top8_report",{key},bracket.first_to)),...set.slots.map(p=>action("DQ "+name(profiles[p]),()=>{if(confirm("Aplicar DQ neste confronto?"))adminCommand("top8_report",{key,dq:p});})));
+        card.append(action("Reservar para stream",()=>selectStream("top8:"+key)),action("Reportar",()=>reportAdmin("top8_report",{key},bracket.first_to)),...set.slots.map(p=>action("DQ "+name(profiles[p]),()=>{if(confirm("Aplicar DQ neste confronto?"))adminCommand("top8_report",{key,dq:p});})));
       }
       target.append(card);
     }
@@ -217,8 +218,9 @@
   $("admin-load").addEventListener("click",()=>{if(!busy)loadAdmin($("admin-event").value).catch(err=>error("admin-status",err));});
   async function loadAdmin(id) {
     if(!user?.admin||!id)return;const e=epoch;const data=await request("/admin"+path(id));
+    const stream=await request("/admin/stream");
     if(e!==epoch||!user?.admin)return;
-    adminId=id;adminState=data;seedOrder=[...data.state.players].sort((a,b)=>a.seed-b.seed).map(p=>p.id);renderAdmin();
+    streamState=stream;adminId=id;adminState=data;seedOrder=[...data.state.players].sort((a,b)=>a.seed-b.seed).map(p=>p.id);renderAdmin();
   }
   function renderSeeds(){
     const list=$("seed-list");list.replaceChildren();
@@ -232,11 +234,11 @@
   $("save-seeds").addEventListener("click",()=>adminCommand("reseed",{ordered_ids:[...seedOrder]}));
   function renderAdmin(){
     const state=adminState.state,profiles=adminState.profiles||{};
-    $("admin-detail").hidden=false;renderSeeds();
+    $("admin-detail").hidden=false;renderSeeds();renderStream();
     const matches=$("admin-matches");matches.replaceChildren();
     for(const m of state.matches.filter(m=>!["complete","cancelled"].includes(m.status))){
       const card=el("article",undefined,"ladder-panel");card.append(el("h3","#"+m.id+" · "+(matchStates[m.status]||m.status)),el("p",name(profiles[m.a])+" × "+name(profiles[m.b])));
-      if(["playing","reporting","disputed"].includes(m.status))card.append(action("Resolver placar",()=>reportAdmin("resolve",{match_id:m.id},state.rules.first_to)),action("Cancelar partida",()=>{if(confirm("Cancelar sem pontuação?"))adminCommand("resolve",{match_id:m.id});}));
+      if(["playing","reporting","disputed"].includes(m.status))card.append(action("Reservar para stream",()=>selectStream("ladder:"+m.id)),action("Resolver placar",()=>reportAdmin("resolve",{match_id:m.id},state.rules.first_to)),action("Cancelar partida",()=>{if(confirm("Cancelar sem pontuação?"))adminCommand("resolve",{match_id:m.id});}));
       matches.append(card);
     }
     if(!matches.children.length)matches.append(el("p","Nenhuma partida pendente."));
@@ -244,6 +246,33 @@
     if(!state.bracket)phase.append(action("Congelar e gerar Top 8",()=>{if(confirm("Gerar classificação final e prévia do Top 8?"))adminCommand("freeze",{first_to:3});},Date.now()/1000<state.closes_at));
     else if(!state.bracket.started)phase.append(action("Confirmar início do Top 8",()=>{if(confirm("Iniciar Top 8 com os participantes exibidos?"))adminCommand("top8_start");}));
     renderBracket($("admin-bracket"),state.bracket,profiles,true);
+  }
+  function renderStream(){
+    const selection=streamState?.selection, controls=$("stream-actions");
+    controls.replaceChildren();
+    $("stream-selection").textContent=selection
+      ? "Evento: "+selection.event_id+" · "+(selection.match_key||"Classificação")+" — reserva não pausa a partida."
+      : "Nenhuma seleção de transmissão.";
+    controls.append(action("Selecionar evento",()=>selectStream(null)));
+    if(selection)controls.append(action("Liberar seleção",()=>selectStream(null,true)));
+    if(selection?.event_id===adminId)controls.append(action("Carregar no placar",loadScoreboard,!streamState.scoreboard_enabled));
+    if(!streamState?.scoreboard_enabled)controls.append(el("p","Ponte do placar desabilitada no backend local."));
+  }
+  async function selectStream(matchKey,clear=false){
+    if(!user?.admin||busy||!adminId)return;
+    busy=true;const e=epoch;
+    try{
+      const data=await request("/admin/stream","PUT",{event_id:clear?null:adminId,match_key:matchKey});
+      if(e===epoch){streamState=data;renderStream();$("admin-status").textContent="Seleção atualizada.";}
+    }catch(err){if(e===epoch)error("admin-status",err);}finally{busy=false;}
+  }
+  async function loadScoreboard(){
+    if(!user?.admin||busy||!streamState?.scoreboard_enabled||!streamState.selection)return;
+    if(!confirm("Substituir o placar atual pelo evento ou partida selecionada?"))return;
+    busy=true;const e=epoch;
+    try{await request("/admin/stream/load-scoreboard","POST",streamState.selection);
+      if(e===epoch)$("admin-status").textContent="Placar carregado. O resultado oficial permanece no Ladder.";
+    }catch(err){if(e===epoch)error("admin-status",err);}finally{busy=false;}
   }
   function reportAdmin(actionName,args,ft){
     const raw=prompt("Informe o placar A-B (FT"+ft+")");
