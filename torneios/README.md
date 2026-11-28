@@ -1,9 +1,21 @@
 # SaYuuVT Ladder — testes locais
 
-A página perfil.html é um candidato de integração local com Discord.
-Serve o repositório com python -m http.server 8000 --bind 127.0.0.1,
-abra http://localhost:8000/torneios/perfil.html (não 127.0.0.1 no navegador).
-O backend deve rodar com local_player na porta 5126 e redirect URI igual
-à página local cadastrada no Discord. Não funciona ainda no Pages público.
-Não gravar Client Secret ou token em código. A sessão fica em memória,
-portanto recarregar a página exige novo login. Sem integração de produção.
+O checkout de desenvolvimento contém a página inicial e uma área autenticada
+em perfil.html com telas Perfil, Competição e Administração. A navegação interna
+usa o mesmo documento para manter o token somente em memória (sem armazenamento
+persistente); a administração tem uma tela própria com criação de eventos,
+organização de seeds, resolução de partidas e reporte/DQ do Top 8.
+Competição inclui inscrição, fila, check-in, cancelamento, chat privado Ladder,
+classificação, Top 8 e Discord do adversário pronto no Top 8.
+
+Execute no repositório front-end:
+
+    python -m http.server 8000 --bind 127.0.0.1
+
+Abra http://localhost:8000/torneios/perfil.html (não 127.0.0.1 no navegador).
+O backend deve executar local_player na porta 5126 com o redirect URI igual à
+página local cadastrada no Discord. Nenhuma conexão ao backend está habilitada
+no Pages publicado. Não gravar Client Secret ou token em código.
+Recarregar a página exige novo login. A API é experimental; não publicar.
+O laboratório permanece separado e usa exportação/importação de JSON.
+O chat do Top 8 e a revisão visual completa em navegador ainda estão pendentes.

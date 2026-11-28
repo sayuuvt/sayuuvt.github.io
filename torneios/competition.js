@@ -31,6 +31,7 @@
     screen = next;
     for (const id of ["profile","competition","management"]) $(id).hidden = !user || id !== screen;
     if (screen !== "competition") clearRoom();
+    if (user) history.replaceState(null,"",location.pathname+"#"+screen);
     if (screen !== "profile" && user) refreshCatalog().catch(err => error(screen === "management" ? "admin-status" : "competition-status",err));
   }
   document.addEventListener("ladder-user", event => {
@@ -42,9 +43,10 @@
       clearRoom(); $("standings").replaceChildren(); $("public-bracket").replaceChildren();
       $("event-catalog").replaceChildren(); $("admin-event").replaceChildren(); $("seed-list").replaceChildren();
       $("admin-matches").replaceChildren(); $("admin-bracket").replaceChildren();
-      $("event-detail").hidden=true; $("admin-detail").hidden=true;
+      $("event-detail").hidden=true; $("admin-detail").hidden=true; $("top8-contact").replaceChildren(); $("top8-contact").hidden=true;
     }
-    show(user && user.complete && screen !== "profile" ? screen : "profile");
+    const requested=location.hash.slice(1);
+    show(user && user.complete && ["profile","competition","management"].includes(requested) ? requested : "profile");
   });
   for (const button of document.querySelectorAll("[data-screen]")) button.addEventListener("click", () => show(button.dataset.screen));
   async function refreshCatalog() {
@@ -110,7 +112,19 @@
       body.append(tr);
     }
     renderBracket($("public-bracket"),current.bracket,Object.fromEntries(current.standings.map(p=>[p.id,p])));
+    renderTop8Contact(current.top8_match);
     renderMatch(current.match);
+  }
+  function renderTop8Contact(match) {
+    const panel=$("top8-contact"); panel.replaceChildren(); panel.hidden=!match;
+    if(!match)return;
+    panel.append(el("h3","Seu confronto · "+bracketNames[match.key]),el("p","FT"+match.first_to+" — resultado administrado pela organização."));
+    for(const p of match.players){
+      const line=el("div",undefined,"ladder-actions");
+      line.append(el("strong",name(p)),el("span",p.discord_username?"@"+p.discord_username:"Discord indisponível"));
+      if(p.id!==user.id&&p.discord_username)line.append(action("Copiar Discord",async()=>{try{await navigator.clipboard.writeText(p.discord_username);$("competition-status").textContent="Discord copiado.";}catch(err){error("competition-status",err);}}));
+      panel.append(line);
+    }
   }
   function renderMatch(m) {
     if (!m) { if (room!==null) clearRoom(); return; }
