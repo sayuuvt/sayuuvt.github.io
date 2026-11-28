@@ -43,3 +43,10 @@
 .ladder-seeds li { padding:6px; border-bottom:1px solid var(--line); }
 .ladder-seeds button { margin:0 0 0 6px; padding:5px 10px; }
 .ladder hr { border:0; border-top:1px solid var(--line); margin:24px 0; }
+
+.ladder [hidden] { display:none !important; }
+.ladder-seeds li[draggable=true] { cursor:grab; }
+.ladder-seeds li.seed-drop-target { outline:2px solid var(--neon-blue); outline-offset:-2px; }
+.ladder-panel { min-width:0; overflow-wrap:anywhere; }
+.ladder-actions input { max-width:100%; }
+@media(max-width:600px){.ladder-header{flex-wrap:wrap}.ladder-panel{padding:14px}.ladder-main{gap:16px}}

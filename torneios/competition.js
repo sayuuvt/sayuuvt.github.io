@@ -17,6 +17,7 @@
   let epoch = 0, busy = false, polling = false;
   let streamState = null;
   let top8Room = null, top8Cursor = 0, moderation = null;
+  let draggedSeed = null;
   const error = (target, err) => { $(target).textContent = err.message || "Não foi possível concluir a operação."; };
   const name = p => p ? [p.team,p.nick || "Competidor"].filter(Boolean).join(" | ") : "A definir";
   const path = id => "/events/" + encodeURIComponent(id);
@@ -297,6 +298,12 @@
     const list=$("seed-list");list.replaceChildren();
     seedOrder.forEach((id,i)=>{
       const p=adminState.profiles[id],li=el("li",name(p));
+      li.draggable=true;
+      li.addEventListener("dragstart",event=>{draggedSeed=id;event.dataTransfer.effectAllowed="move";event.dataTransfer.setData("text/plain",id);});
+      li.addEventListener("dragover",event=>{if(draggedSeed&&draggedSeed!==id){event.preventDefault();li.classList.add("seed-drop-target");}});
+      li.addEventListener("dragleave",()=>li.classList.remove("seed-drop-target"));
+      li.addEventListener("dragend",()=>{draggedSeed=null;li.classList.remove("seed-drop-target");});
+      li.addEventListener("drop",event=>{event.preventDefault();const from=seedOrder.indexOf(draggedSeed),to=seedOrder.indexOf(id);draggedSeed=null;if(from>=0&&to>=0&&from!==to){seedOrder.splice(to,0,seedOrder.splice(from,1)[0]);}renderSeeds();});
       if(p?.discord_username)li.append(el("span"," · @"+p.discord_username));
       for(const [label,delta] of [["↑",-1],["↓",1]]) li.append(action(label,()=>{const j=i+delta;[seedOrder[i],seedOrder[j]]=[seedOrder[j],seedOrder[i]];renderSeeds();},i+delta<0||i+delta>=seedOrder.length));
       list.append(li);
