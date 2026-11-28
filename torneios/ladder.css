@@ -1,0 +1,28 @@
+/* Reutiliza os tokens e a tipografia do site principal. */
+.ladder { background: radial-gradient(ellipse at top, #19223c, var(--bg) 55%); }
+.ladder-header, .ladder-main, .ladder-footer { max-width: 1100px; margin: auto; padding: 24px; }
+.ladder-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); }
+.ladder-header img { width: 132px; height: auto; }
+.ladder-header nav { display: flex; gap: 20px; flex-wrap: wrap; }
+.ladder a { color: var(--neon-blue); text-decoration: none; }
+.ladder a:hover { text-decoration: underline; }
+.ladder a[aria-current="page"] { color: var(--text-strong); }
+.ladder-main { display: grid; gap: 26px; }
+.ladder-hero { padding: clamp(20px, 5vw, 48px); border: 1px solid var(--line-strong); border-left: 3px solid var(--neon-blue); border-radius: var(--radius-lg); background: var(--panel-bg); }
+.ladder h1 { margin: 6px 0; font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -.025em; line-height: 1.1; }
+.ladder h2 { font-size: 1.35rem; margin: 0 0 12px; }
+.ladder h3 { margin: 4px 0; }
+.ladder p { color: var(--text-dim); }
+.ladder .eyebrow { color: var(--neon-blue); font-size: .75rem; font-weight: 700; letter-spacing: .15em; margin: 0; }
+.ladder .notice { padding: 12px; border: 1px solid #665338; border-radius: var(--radius-md); background: #231f25; color: #ffda9a; }
+.ladder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+.ladder-panel { border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--panel-bg); padding: 20px; }
+.ladder-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 180px),1fr)); gap: 14px; }
+.ladder label { display: grid; gap: 6px; font-size: .9rem; color: var(--text-dim); }
+.ladder input, .ladder select, .ladder button { font: inherit; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); min-width: 0; }
+.ladder button { cursor: pointer; border-color: var(--neon-blue); color: var(--neon-blue); font-weight: 700; margin-top: 16px; }
+.ladder button:hover { background: var(--panel-bg-hover); }
+.ladder :focus-visible { outline: 2px solid var(--neon-blue); outline-offset: 3px; }
+.ladder pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 14px; border-radius: var(--radius-sm); }
+.ladder-footer { font-size: .8rem; color: var(--text-dim); border-top: 1px solid var(--line); }
+@media (max-width: 480px) { .ladder-header, .ladder-main, .ladder-footer { padding: 16px; } .ladder-header img { width: 96px; } .ladder-header nav { gap: 10px; } }
