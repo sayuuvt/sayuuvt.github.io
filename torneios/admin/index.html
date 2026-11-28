@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>SaYuuVT | Laboratório Ladder</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../ladder.css">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="simulator.js" defer></script>
+</head>
+<body class="ladder">
+<header class="ladder-header"><a href="../../"><img src="../../assets/logo.webp" alt="SaYuuVT"></a><nav aria-label="Navegação"><a href="../">Torneios</a><a href="./" aria-current="page">Laboratório</a></nav></header>
+<main class="ladder-main">
+<section class="ladder-hero"><p class="eyebrow">DESENVOLVIMENTO · SIMULAÇÃO</p><h1>Laboratório Ladder</h1><p>Prepare configurações reproduzíveis para validar a pontuação e a diversidade de confrontos.</p><p class="notice">Protótipo local: gera um comando para o simulador Python. Não executa a simulação no navegador e não possui acesso administrativo ao servidor.</p></section>
+<section class="ladder-panel">
+<h2>Configuração de simulação</h2>
+<form id="config">
+<div class="ladder-fields">
+<label>Participantes<input name="participants" type="number" min="2" max="256" value="32" required></label>
+<label>Duração (minutos)<input name="minutes" type="number" min="1" max="240" value="120" required></label>
+<label>Repetições<input name="runs" type="number" min="1" max="10000" value="100" required></label>
+<label>Formato<select name="first-to"><option value="1">FT1</option><option value="2" selected>FT2</option><option value="3">FT3</option></select></label>
+<label>Pontos base<input name="base" type="number" min="1" max="1000" value="100" required></label>
+<label>Peso seed adversário<input name="opponent-seed" type="number" min="0" max="1000" value="30" required></label>
+<label>Peso ranking adversário<input name="opponent-rank" type="number" min="0" max="1000" value="25" required></label>
+<label>Compensação seed próprio<input name="own-seed" type="number" min="0" max="1000" value="30" required></label>
+<label>Seed aleatório<input name="random-seed" type="number" min="0" max="2147483647" value="42" required></label>
+</div>
+<button type="submit">Gerar comando Python</button>
+</form>
+<h3>Comando para o backend</h3><pre id="command" aria-live="polite"></pre><button type="button" id="copy">Copiar comando</button><p id="status" role="status"></p>
+</section>
+<section class="ladder-panel"><h2>Resultado de uma execução</h2><p>Importe o JSON gerado pelo simulador local. Nenhum arquivo é enviado à internet.</p><label>Relatório JSON<input type="file" id="report" accept=".json,application/json"></label><div id="metrics" class="ladder-grid" aria-live="polite"></div></section>
+</main><footer class="ladder-footer">SaYuuVT · Ambiente de desenvolvimento</footer>
+</body></html>
