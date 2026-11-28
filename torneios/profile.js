@@ -21,6 +21,7 @@ function render(user) {
   profile.hidden = !user;
   login.hidden = !!user;
   logout.hidden = !user;
+  document.dispatchEvent(new CustomEvent("ladder-user", {detail:user}));
   if (!user) return;
   document.querySelector("#discord-name").textContent = "Discord: @" + user.discord_username;
   const url = new URL(user.avatar_url);
@@ -44,6 +45,7 @@ login.addEventListener("click", async () => {
 logout.addEventListener("click", async () => {
   try { await request("/auth/logout","POST"); } catch { status.textContent = "Sessão local encerrada; a revogação no servidor não foi confirmada."; }
   token = null;
+  login.disabled = !local;
   render(null);
 });
 form.addEventListener("submit", async event => {

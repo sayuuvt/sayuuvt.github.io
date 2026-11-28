@@ -26,3 +26,20 @@
 .ladder pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 14px; border-radius: var(--radius-sm); }
 .ladder-footer { font-size: .8rem; color: var(--text-dim); border-top: 1px solid var(--line); }
 @media (max-width: 480px) { .ladder-header, .ladder-main, .ladder-footer { padding: 16px; } .ladder-header img { width: 96px; } .ladder-header nav { gap: 10px; } }
+
+.ladder-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.ladder-actions button { margin:4px 0; }
+.ladder button:disabled { opacity:.5; cursor:not-allowed; }
+.ladder-table-wrap { overflow-x:auto; }
+.ladder-table { width:100%; border-collapse:collapse; white-space:nowrap; }
+.ladder-table th,.ladder-table td { padding:10px; text-align:left; border-bottom:1px solid var(--line); }
+.ladder-table tr[data-qualified="winners"] { border-left:3px solid #00c8c0; }
+.ladder-table tr[data-qualified="losers"] { border-left:3px solid #be64f5; }
+.ladder-player { display:flex; gap:12px; align-items:center; overflow-wrap:anywhere; }
+.ladder-player img, #discord-avatar { border-radius:50%; object-fit:cover; }
+.ladder-chat { max-height:260px; overflow:auto; padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:var(--radius-md); overflow-wrap:anywhere; }
+.ladder-chat p { margin:6px 0; white-space:pre-wrap; }
+.ladder-seeds { padding-left:28px; }
+.ladder-seeds li { padding:6px; border-bottom:1px solid var(--line); }
+.ladder-seeds button { margin:0 0 0 6px; padding:5px 10px; }
+.ladder hr { border:0; border-top:1px solid var(--line); margin:24px 0; }
