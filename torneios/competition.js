@@ -16,6 +16,7 @@
   let adminState = null, adminId = null, seedOrder = [], room = null, cursor = 0;
   let epoch = 0, busy = false, polling = false;
   let streamState = null;
+  let top8Room = null, top8Cursor = 0, moderation = null;
   const error = (target, err) => { $(target).textContent = err.message || "Não foi possível concluir a operação."; };
   const name = p => p ? [p.team,p.nick || "Competidor"].filter(Boolean).join(" | ") : "A definir";
   const path = id => "/events/" + encodeURIComponent(id);
@@ -31,7 +32,8 @@
     epoch++;
     screen = next;
     for (const id of ["profile","competition","management"]) $(id).hidden = !user || id !== screen;
-    if (screen !== "competition") clearRoom();
+    if (screen !== "competition") {clearRoom(); clearTop8Chat();}
+    if (screen !== "management") closeModeration();
     if (user) history.replaceState(null,"",location.pathname+"#"+screen);
     if (screen !== "profile" && user) refreshCatalog().catch(err => error(screen === "management" ? "admin-status" : "competition-status",err));
   }
@@ -40,6 +42,7 @@
     $("competition-nav").hidden = !user;
     $("admin-nav").hidden = !user || !user.admin;
     if (!user) {
+      clearTop8Chat(); closeModeration(); $("admin-results").replaceChildren(); $("simulation-results").replaceChildren();
       epoch++; events=[]; selected=null; current=null; adminId=null; adminState=null; seedOrder=[]; streamState=null; $("stream-actions").replaceChildren(); $("stream-selection").textContent="";
       clearRoom(); $("standings").replaceChildren(); $("public-bracket").replaceChildren();
       $("event-catalog").replaceChildren(); $("admin-event").replaceChildren(); $("seed-list").replaceChildren();
@@ -71,7 +74,7 @@
   }
   async function openEvent(id) {
     if (busy) return;
-    selected=id; current=null; epoch++; clearRoom(); $("event-detail").hidden=true;
+    selected=id; current=null; epoch++; clearRoom(); clearTop8Chat(); $("event-detail").hidden=true;
     try { await refreshEvent(); } catch(err) { error("competition-status",err); }
   }
   async function refreshEvent() {
@@ -82,6 +85,7 @@
     if (current && current.version>state.version) return;
     current=state; renderEvent();
     if (room!==null && !$("match-chat").hidden) await refreshChat(id,room,e);
+    if (top8Room!==null) await refreshTop8Chat(id,top8Room,e);
   }
   async function command(actionName,args={}) {
     if (busy || !current) return;
@@ -118,7 +122,10 @@
   }
   function renderTop8Contact(match) {
     const panel=$("top8-contact"); panel.replaceChildren(); panel.hidden=!match;
-    if(!match)return;
+    if(!match){clearTop8Chat();return;}
+    const identity=match.key+":"+match.players.map(p=>p.id).sort().join(":");
+    if(top8Room?.identity!==identity){clearTop8Chat();top8Room={key:match.key,identity};}
+    $("top8-chat").hidden=false;
     panel.append(el("h3","Seu confronto · "+bracketNames[match.key]),el("p","FT"+match.first_to+" — resultado administrado pela organização."));
     for(const p of match.players){
       const line=el("div",undefined,"ladder-actions");
@@ -192,6 +199,67 @@
       if(e===epoch&&room===m){if(input.value.trim()===body)input.value="";await refreshChat(id,m,e);}
     } catch(err){if(e===epoch)error("competition-status",err);} finally{button.disabled=false;}
   });
+  function clearTop8Chat(){
+    top8Room=null;top8Cursor=0;$("top8-messages").replaceChildren();$("top8-chat-form").reset();$("top8-chat").hidden=true;
+  }
+  async function refreshTop8Chat(id,roomInfo,e){
+    const data=await request(path(id)+"/top8/"+encodeURIComponent(roomInfo.key)+"/chat?after="+top8Cursor);
+    if(e!==epoch||selected!==id||top8Room!==roomInfo||!user)return;
+    const box=$("top8-messages"),near=box.scrollHeight-box.scrollTop-box.clientHeight<50;
+    for(const msg of data){
+      if(msg.id<=top8Cursor)continue;top8Cursor=msg.id;
+      const p=current?.top8_match?.players.find(x=>x.id===msg.author);
+      const line=el("p");line.append(el("strong",name(p)+": "),document.createTextNode(msg.body));box.append(line);
+    }
+    if(near)box.scrollTop=box.scrollHeight;
+  }
+  $("top8-chat-form").addEventListener("submit",async event=>{
+    event.preventDefault();if(!top8Room||!user)return;
+    const r=top8Room,id=selected,e=epoch,input=event.target.elements.body,body=input.value.trim();
+    if(!body)return;const button=event.target.querySelector("button");button.disabled=true;
+    try{await request(path(id)+"/top8/"+encodeURIComponent(r.key)+"/chat","POST",{body,key:crypto.randomUUID()});
+      if(e===epoch&&top8Room===r){if(input.value.trim()===body)input.value="";await refreshTop8Chat(id,r,e);}
+    }catch(err){if(e===epoch)error("competition-status",err);}finally{button.disabled=false;}
+  });
+  function closeModeration(){
+    moderation=null;$("moderation-chat").hidden=true;$("moderation-messages").replaceChildren();
+  }
+  $("moderation-close").addEventListener("click",closeModeration);
+  $("moderation-more").addEventListener("click",()=>readModeration().catch(err=>error("admin-status",err)));
+  function openModeration(kind,key){
+    closeModeration();moderation={id:adminId,kind,key,cursor:0};$("moderation-chat").hidden=false;
+    $("moderation-title").textContent="Histórico privado · "+kind+" "+key;
+    readModeration().catch(err=>error("admin-status",err));
+  }
+  async function readModeration(){
+    const m=moderation;if(!m||!user?.admin)return;
+    const rows=await request("/admin"+path(m.id)+"/chat/"+m.kind+"/"+encodeURIComponent(m.key)+"?after="+m.cursor);
+    if(moderation!==m||!user?.admin)return;
+    for(const row of rows){
+      if(row.id<=m.cursor)continue;m.cursor=row.id;
+      const line=el("p");line.append(el("strong",name(adminState?.profiles?.[row.author])+": "),document.createTextNode(row.body));$("moderation-messages").append(line);
+    }
+    if(!rows.length&&!m.cursor)$("moderation-messages").textContent="Nenhuma mensagem.";
+  }
+  $("simulation-form").addEventListener("submit",async event=>{
+    event.preventDefault();if(!user?.admin)return;
+    const form=event.target,f=new FormData(form),e=epoch,button=form.querySelector("button");
+    button.disabled=true;const target=$("simulation-results");target.textContent="Executando simulação local…";
+    const rules={first_to:Number(f.get("ft"))};
+    for(const k of ["base","opponent_seed","opponent_rank","own_seed"])rules[k]=Number(f.get(k));
+    try{
+      const data=await request("/admin/simulations","POST",{participants:Number(f.get("participants")),duration:Number(f.get("duration"))*60,runs:Number(f.get("runs")),random_seed:Number(f.get("random_seed")),comparison:f.has("comparison"),rules});
+      if(e!==epoch||!user?.admin)return;
+      target.replaceChildren();
+      const reports=data.configured?data:{configured:data}, labels={configured:"Fórmula configurada",no_own_seed:"Sem compensação",flat:"Pontuação fixa"};
+      for(const [key,r] of Object.entries(reports)){
+        const card=el("article",undefined,"ladder-panel");
+        card.append(el("h3",labels[key]||key));
+        for(const [label,val] of [["Torneios",r.runs],["Confrontos",r.completed_matches],["Inéditos",Math.round(r.novel_fraction*1000)/10+"%"],["Fila média",Math.round(r.mean_queue_seconds*10)/10+" s"],["Recall Top 8",Math.round(r.true_top8_recall*1000)/10+"%"]])card.append(el("p",label+": "+val));
+        target.append(card);
+      }
+    }catch(err){if(e===epoch)target.textContent=err.message;}finally{button.disabled=false;}
+  });
   function renderBracket(target, bracket, profiles, admin=false) {
     target.replaceChildren();
     if (!bracket) {target.append(el("p","O Top 8 ainda não foi gerado."));return;}
@@ -203,6 +271,8 @@
       if(admin&&bracket.started&&set.status==="ready"){
         card.append(action("Reservar para stream",()=>selectStream("top8:"+key)),action("Reportar",()=>reportAdmin("top8_report",{key},bracket.first_to)),...set.slots.map(p=>action("DQ "+name(profiles[p]),()=>{if(confirm("Aplicar DQ neste confronto?"))adminCommand("top8_report",{key,dq:p});})));
       }
+      if(admin&&bracket.started&&set.slots.every(Boolean))card.append(action("Consultar chat",()=>openModeration("top8",key)));
+      if(admin&&set.reason==="played")card.append(action("Corrigir resultado",()=>reportAdmin("top8_correct",{key},bracket.first_to,true)));
       target.append(card);
     }
   }
@@ -220,6 +290,7 @@
     if(!user?.admin||!id)return;const e=epoch;const data=await request("/admin"+path(id));
     const stream=await request("/admin/stream");
     if(e!==epoch||!user?.admin)return;
+    if(adminId!==id)closeModeration();
     streamState=stream;adminId=id;adminState=data;seedOrder=[...data.state.players].sort((a,b)=>a.seed-b.seed).map(p=>p.id);renderAdmin();
   }
   function renderSeeds(){
@@ -239,9 +310,16 @@
     for(const m of state.matches.filter(m=>!["complete","cancelled"].includes(m.status))){
       const card=el("article",undefined,"ladder-panel");card.append(el("h3","#"+m.id+" · "+(matchStates[m.status]||m.status)),el("p",name(profiles[m.a])+" × "+name(profiles[m.b])));
       if(["playing","reporting","disputed"].includes(m.status))card.append(action("Reservar para stream",()=>selectStream("ladder:"+m.id)),action("Resolver placar",()=>reportAdmin("resolve",{match_id:m.id},state.rules.first_to)),action("Cancelar partida",()=>{if(confirm("Cancelar sem pontuação?"))adminCommand("resolve",{match_id:m.id});}));
+      if(m.status!=="checkin")card.append(action("Consultar chat",()=>openModeration("ladder",m.id)));
       matches.append(card);
     }
     if(!matches.children.length)matches.append(el("p","Nenhuma partida pendente."));
+    const results=$("admin-results");results.replaceChildren();
+    for(const m of state.matches.filter(m=>m.status==="complete").slice(-30).reverse()){
+      const card=el("article",undefined,"ladder-panel");card.append(el("h3","#"+m.id+" · "+name(profiles[m.a])+" × "+name(profiles[m.b])),el("p",m.result.join(" × ")),action("Consultar chat",()=>openModeration("ladder",m.id)));
+      if(!state.frozen)card.append(action("Corrigir placar",()=>reportAdmin("correct",{match_id:m.id},state.rules.first_to,true)));
+      results.append(card);
+    }
     const phase=$("admin-phase-actions");phase.replaceChildren();
     if(!state.bracket)phase.append(action("Congelar e gerar Top 8",()=>{if(confirm("Gerar classificação final e prévia do Top 8?"))adminCommand("freeze",{first_to:3});},Date.now()/1000<state.closes_at));
     else if(!state.bracket.started)phase.append(action("Confirmar início do Top 8",()=>{if(confirm("Iniciar Top 8 com os participantes exibidos?"))adminCommand("top8_start");}));
@@ -274,12 +352,13 @@
       if(e===epoch)$("admin-status").textContent="Placar carregado. O resultado oficial permanece no Ladder.";
     }catch(err){if(e===epoch)error("admin-status",err);}finally{busy=false;}
   }
-  function reportAdmin(actionName,args,ft){
+  function reportAdmin(actionName,args,ft,correction=false){
     const raw=prompt("Informe o placar A-B (FT"+ft+")");
     if(raw===null)return;
     const parsed=/^(\d+)\s*[-x×:]\s*(\d+)$/.exec(raw.trim());
     if(!parsed){$("admin-status").textContent="Placar inválido.";return;}
     const a=Number(parsed[1]),b=Number(parsed[2]);if(!((a===ft&&b<ft)||(b===ft&&a<ft))){$("admin-status").textContent="Placar inválido.";return;}
+    if(correction){const reason=prompt("Justificativa obrigatória da correção");if(!reason?.trim())return;args={...args,reason:reason.trim()};}
     adminCommand(actionName,{...args,a,b});
   }
   async function adminCommand(actionName,args={}){
